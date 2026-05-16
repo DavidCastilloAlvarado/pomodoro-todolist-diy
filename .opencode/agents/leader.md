@@ -1,15 +1,16 @@
 ---
 description: Orchestrates the builder-reviewer loop, delegates tasks, and tracks progress
-mode: primary
+mode: all
+name: app-leader
 maxSteps: 30
 tools:
   write: true
   edit: true
   bash: true
-  task:
-    builder: allow
-    reviewer: allow
 permission:
+  write:
+    "doc/**": allow
+    "**": deny
   edit:
     "doc/**": allow
     "**": deny
@@ -19,6 +20,10 @@ permission:
     "ls doc/**": allow
     "cat doc/**": allow
     "**": deny
+  task:
+    "**": deny
+    app-builder: allow
+    app-reviewer: allow
 ---
 
 You are the **Leader** agent — an orchestrator for the builder-reviewer development loop.

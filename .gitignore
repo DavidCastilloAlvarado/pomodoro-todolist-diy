@@ -60,3 +60,7 @@ app.*.map.json
 # Android native build
 /android/app/src/main/jniLibs/
 /android/app/src/main/libs/
+
+# Screenshots
+flutter_*.png
+
