@@ -1,0 +1,62 @@
+# Flutter/Dart
+.dart_tool/
+.pub/
+/build/
+/coverage/
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+skills-lock.json
+
+# IDE
+.idea/
+.metadata
+*.iml
+*.ipr
+*.iws
+
+# Android
+/android/app/.gradle/
+/android/app/build/
+/android/.gradle/
+
+# iOS
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/ephemeral/
+/ios/Flutter/App.framework/
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+/ios/Runner/GeneratedPluginRegistrant.*
+
+# macOS
+/macOS/Flutter/GeneratedPluginRegistrant.swift
+
+# Windows
+/windows/runner/runner.exe
+/windows/runner/runner.pdb
+/windows/runner/flutter_assemble.exe
+
+# Linux
+/linux/flutter/ephemeral/
+/linux/flutter/libflutter_linux_gtk.so
+
+# Symbolication
+app.*.symbols
+app.*.map.json
+
+# OS
+.DS_Store
+*.log
+
+# VS Code
+.vscode/
+
+# Android build variants
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
+
+# Android native build
+/android/app/src/main/jniLibs/
+/android/app/src/main/libs/
