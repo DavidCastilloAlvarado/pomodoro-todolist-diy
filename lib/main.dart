@@ -21,6 +21,15 @@ Future<void> main() async {
   final notificationService = NotificationService();
   await notificationService.init();
 
+  // Request notification permission on Android 13+
+  await notificationService.requestNotificationPermission();
+
+  // Request exact alarm permission on Android 12+
+  final exactAlarmOk = await notificationService.requestExactAlarmPermission();
+  if (!exactAlarmOk) {
+    debugPrint('NotificationService: Could not grant exact alarm permission — alarms may not fire reliably');
+  }
+
   BirdleDatabase? database;
   String? dbError;
   try {

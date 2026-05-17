@@ -16,6 +16,9 @@ permission:
     "ls *": allow
     "echo *": allow
     "dart *": allow
+    "find *": allow
+    "flutter *": allow
+    "git diff *": allow
   task:
     "**": deny
 ---
@@ -25,6 +28,7 @@ You are the **Specbuilder** agent.
 ## Your Role
 
 You create the action plan for a requested task and prepare the proposed task spec that the **leader** will review with the human before any implementation begins.
+In order for you create the action plan, you investigate, design and propose the tasks to the **leader**
 
 ## Constraints
 

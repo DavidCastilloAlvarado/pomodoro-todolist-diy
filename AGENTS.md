@@ -27,19 +27,22 @@ This project uses a **leader → specbuilder → human confirmation → leader �
 
 ### Leader Rules
 
-- Only writes inside `doc/`
+- Only writes inside `doc/history.md`, `doc/architecture.md`, `doc/plan.md`
 - Only has `edit` and `bash` tools with basic permissions
 - One phase at a time
-- Delegates planning to `specbuilder`
+- Always Delegates planning, investigation and implementation to `specbuilder`
 - Requests explicit human confirmation before implementation begins
-- Defines tasks in `doc/tasks/task_<name>.md` with `completion_criteria` based on the approved plan
 - Maximum 3 builder-reviewer iterations per task
 - Tracks progress in `doc/history.md`
+- Never review code made by the `builder`
 
 ### Specbuilder Rules
 
 - Only writes inside `doc/`
+- Investigate the requirements for the implementation
+- Investigates bug fixes
 - Creates the action plan for the requested task
+- Defines tasks in `doc/tasks/task_<name>.md` with `completion_criteria` based on the approved plan
 - Returns a proposed task spec for leader review and human confirmation
 - Does not implement application code
 

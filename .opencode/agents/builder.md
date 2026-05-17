@@ -18,6 +18,9 @@ permission:
     "dart pub get*": allow
     "flutter pub get*": allow
     "dart *": allow
+    "cat *": allow
+    "ls *": allow
+    "head *": allow
   task:
     "**": deny
     reviewer: allow

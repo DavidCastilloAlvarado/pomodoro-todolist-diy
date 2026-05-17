@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:birdle/data/models/todo_item.dart';
+import 'package:birdle/data/services/notification_service.dart';
 
 class AlarmPickerDialog extends StatefulWidget {
   const AlarmPickerDialog({super.key, this.initialAlarm});
@@ -36,10 +38,43 @@ class _AlarmPickerDialogState extends State<AlarmPickerDialog> {
     }
   }
 
-  void _ok() {
-    Navigator.of(context).pop<AlarmInfo?>(
-      AlarmInfo(day: _selectedDay, time: _selectedTime),
-    );
+  Future<void> _ok() async {
+    final alarmInfo = AlarmInfo(day: _selectedDay, time: _selectedTime);
+    final canSchedule = await NotificationService().canScheduleExactAlarms();
+    if (!canSchedule && _selectedDay != DayOfWeek.everyDay) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Exact Alarm Permission'),
+            content: const Text(
+              'Your device does not allow Birdle to set exact alarms. '
+              'Alarms may not fire at the exact time you set. '
+              'You can try enabling this in Settings → Apps → Birdle → '
+              'Special app access → Exact alarms.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('OK'),
+              ),
+              OutlinedButton(
+                onPressed: () async {
+                  await openAppSettings();
+                  if (ctx.mounted) {
+                    Navigator.of(ctx).pop();
+                  }
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+    if (mounted) {
+      Navigator.of(context).pop<AlarmInfo?>(alarmInfo);
+    }
   }
 
   void _cancel() {

@@ -20,6 +20,8 @@ permission:
     "flutter analyze*": allow
     "ls *": allow
     "cat *": allow
+    "flutter *": allow
+    "git diff *": allow
   task:
     "**": deny
     builder: allow
