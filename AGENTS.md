@@ -14,28 +14,43 @@
 
 ## Agent Strategy
 
-This project uses a **leader → builder → reviewer** orchestration loop.
+This project uses a **leader → specbuilder → human confirmation → leader → (builder → reviewer loop)** orchestration loop.
 
 ### Agents (`.opencode/agents/`)
 
 | Agent | Mode | Role |
 |---|---|---|
-| `leader` | primary | Orchestrates the loop, delegates tasks, tracks progress in `doc/history.md` |
+| `leader` | primary | Orchestrates the loop, requests human confirmation after planning, delegates work, tracks progress in `doc/history.md` |
+| `specbuilder` | subagent | Creates the action plan for the task and can only write inside `doc/` |
 | `builder` | subagent | Implements code — can write anywhere **except** `doc/plan.md`, `doc/architecture.md`, `doc/history.md` |
 | `reviewer` | subagent | Reviews work against task completion criteria — can **only** write to `doc/tasks/reviews/` |
 
 ### Leader Rules
 
 - Only writes inside `doc/`
+- Only has `edit` and `bash` tools with basic permissions
 - One phase at a time
-- Defines tasks in `doc/tasks/task_<name>.md` with `completion_criteria`
+- Delegates planning to `specbuilder`
+- Requests explicit human confirmation before implementation begins
+- Defines tasks in `doc/tasks/task_<name>.md` with `completion_criteria` based on the approved plan
 - Maximum 3 builder-reviewer iterations per task
 - Tracks progress in `doc/history.md`
+
+### Specbuilder Rules
+
+- Only writes inside `doc/`
+- Creates the action plan for the requested task
+- Returns a proposed task spec for leader review and human confirmation
+- Does not implement application code
 
 ### Agent Loop
 
 ```
-Leader → builder (implement task from doc/tasks/task_<name>.md)
+Leader → specbuilder (create action plan for the task)
+specbuilder → Leader (returns proposed plan / task spec)
+Leader → Human (request confirmation to proceed)
+Human → Leader (approve or request plan changes)
+Leader → builder (start builder-reviewer loop using approved task from doc/tasks/task_<name>.md)
 builder → Leader (signals completion, runs dart analyze)
 Leader → reviewer (review against completion_criteria)
 reviewer → Leader (findings in doc/tasks/reviews/task_review_<name>.md)

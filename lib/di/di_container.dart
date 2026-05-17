@@ -59,17 +59,17 @@ List<SingleChildWidget> buildProviders({BirdleDatabase? database}) {
   ];
 
   final viewModels = <SingleChildWidget>[
-    Provider<PaletteViewModel>(
+    ChangeNotifierProvider<PaletteViewModel>(
       create: (ctx) => PaletteViewModel(
         storage: ctx.read<StorageService>(),
       ),
     ),
-    Provider<ListListViewModel>(
+    ChangeNotifierProvider<ListListViewModel>(
       create: (ctx) => ListListViewModel(
         repository: ctx.read<ListRepository>(),
       ),
     ),
-    Provider<PomodoroViewModel>(
+    ChangeNotifierProvider<PomodoroViewModel>(
       create: (ctx) => PomodoroViewModel(
         repository: ctx.read<PomodoroRepository>(),
       ),

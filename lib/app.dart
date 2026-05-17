@@ -1,10 +1,9 @@
-import 'package:birdle/data/repositories/user_repository.dart';
+import 'package:birdle/ui/screens/splash/splash_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:birdle/data/services/database.dart';
 import 'package:birdle/di/di_container.dart';
-import 'package:birdle/ui/screens/app_shell/app_shell.dart';
-import 'package:birdle/ui/screens/onboarding/onboarding_screen.dart';
+import 'package:birdle/ui/screens/item_detail_page.dart';
 import 'package:birdle/ui/view_models/palette_view_model.dart';
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class App extends StatelessWidget {
@@ -61,7 +60,9 @@ class App extends StatelessWidget {
       child: Consumer<PaletteViewModel>(
         builder: (context, paletteVm, child) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
-          final colorScheme = isDark ? (paletteVm.darkColorScheme ?? paletteVm.colorScheme) : paletteVm.colorScheme;
+          final colorScheme = isDark
+              ? (paletteVm.darkColorScheme ?? paletteVm.colorScheme)
+              : paletteVm.colorScheme;
 
           return MaterialApp(
             title: 'Birdle',
@@ -73,54 +74,17 @@ class App extends StatelessWidget {
               colorScheme: colorScheme,
               useMaterial3: true,
             ),
-            home: const AppEntryPoint(),
+            home: const SplashScreen(),
+            routes: {
+              '/item_detail': (context) {
+                final args = ModalRoute.of(context)?.settings.arguments;
+                final listId = args is String ? args : '';
+                return ItemDetailPage(listId: listId);
+              },
+            },
           );
         },
       ),
     );
-  }
-}
-
-class AppEntryPoint extends StatefulWidget {
-  const AppEntryPoint({super.key});
-
-  @override
-  State<AppEntryPoint> createState() => _AppEntryPointState();
-}
-
-class _AppEntryPointState extends State<AppEntryPoint> {
-  bool _isLoading = true;
-  bool _hasUser = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkUser();
-    });
-  }
-
-  Future<void> _checkUser() async {
-    final userRepo = Provider.of<UserRepository>(context, listen: false);
-    final hasUser = !await userRepo.isFirstLaunch();
-    if (mounted) {
-      setState(() {
-        _hasUser = hasUser;
-        _isLoading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (!_hasUser) {
-      return const OnboardingScreen();
-    }
-    return const AppShell();
   }
 }

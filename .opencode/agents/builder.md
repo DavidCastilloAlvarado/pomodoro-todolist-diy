@@ -1,6 +1,6 @@
 ---
 description: Implements code tasks delegated by the leader orchestrator
-name: app-builder
+name: builder
 mode: subagent
 tools:
   write: true
@@ -12,16 +12,15 @@ permission:
     "doc/architecture.md": deny
     "doc/history.md": deny
     "doc/**": deny
-    "**": allow
   bash:
     "dart analyze*": allow
     "flutter analyze*": allow
     "dart pub get*": allow
     "flutter pub get*": allow
-    "**": deny
+    "dart *": allow
   task:
     "**": deny
-    app-reviewer: allow
+    reviewer: allow
 ---
 
 You are the **Builder** agent — a Flutter developer who implements code tasks.

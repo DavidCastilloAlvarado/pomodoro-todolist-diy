@@ -12,7 +12,10 @@ class PaletteViewModel extends ChangeNotifier {
   String _currentPalette = 'default';
   String get currentPalette => _currentPalette;
 
-  ColorScheme get colorScheme => palettes[_currentPalette]!.light;
+  ColorScheme get colorScheme {
+    final palette = palettes[_currentPalette];
+    return palette?.light ?? palettes.values.first.light;
+  }
   ColorScheme? get darkColorScheme => palettes[_currentPalette]?.dark;
 
   List<Palette> get allPalettes => palettes.values.toList();

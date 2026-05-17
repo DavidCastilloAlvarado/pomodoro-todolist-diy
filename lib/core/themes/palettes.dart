@@ -32,7 +32,7 @@ final palettes = <String, Palette>{
     dark: ColorScheme.dark(
       primary: Colors.blueAccent,
       secondary: Colors.tealAccent,
-      surface: Colors.grey[900]!,
+      surface: Colors.grey.shade900,
       onSurface: Colors.white,
       primaryContainer: Colors.blue.shade900,
       secondaryContainer: Colors.teal.shade900,
@@ -54,7 +54,7 @@ final palettes = <String, Palette>{
     light: ColorScheme.light(
       primary: Colors.greenAccent,
       secondary: Colors.pinkAccent,
-      surface: Colors.grey[100]!,
+      surface: Colors.grey.shade100,
       onSurface: Colors.black,
       primaryContainer: Colors.green.shade100,
       secondaryContainer: Colors.pink.shade100,
@@ -64,7 +64,7 @@ final palettes = <String, Palette>{
     dark: ColorScheme.dark(
       primary: Colors.greenAccent,
       secondary: Colors.pinkAccent,
-      surface: Colors.grey[850]!,
+      surface: Colors.grey.shade900,
       onSurface: Colors.white,
       primaryContainer: Colors.green.shade800,
       secondaryContainer: Colors.pink.shade800,
@@ -94,7 +94,7 @@ final palettes = <String, Palette>{
     dark: ColorScheme.dark(
       primary: Colors.tealAccent,
       secondary: Colors.lightBlueAccent,
-      surface: Colors.grey[900]!,
+      surface: Colors.grey.shade900,
       onSurface: Colors.white,
       primaryContainer: Colors.teal.shade900,
       secondaryContainer: Colors.lightBlue.shade900,
@@ -125,7 +125,7 @@ final palettes = <String, Palette>{
     dark: ColorScheme.dark(
       primary: Colors.deepOrangeAccent,
       secondary: Colors.pinkAccent,
-      surface: Colors.grey[900]!,
+      surface: Colors.grey.shade900,
       onSurface: Colors.white,
       primaryContainer: Colors.deepOrange.shade900,
       secondaryContainer: Colors.pink.shade900,
@@ -156,7 +156,7 @@ final palettes = <String, Palette>{
     dark: ColorScheme.dark(
       primary: Colors.lightGreenAccent,
       secondary: Colors.greenAccent,
-      surface: Colors.grey[900]!,
+      surface: Colors.grey.shade900,
       onSurface: Colors.white,
       primaryContainer: Colors.green.shade900,
       secondaryContainer: Colors.lightGreen.shade900,
@@ -187,7 +187,7 @@ final palettes = <String, Palette>{
     dark: ColorScheme.dark(
       primary: Colors.deepPurpleAccent,
       secondary: Colors.indigoAccent,
-      surface: Colors.grey[900]!,
+      surface: Colors.grey.shade900,
       onSurface: Colors.white,
       primaryContainer: Colors.deepPurple.shade900,
       secondaryContainer: Colors.indigo.shade900,

@@ -11,13 +11,24 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
-  bool _isLoading = true;
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   bool _hasUser = false;
+  bool _ready = false;
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeIn,
+    );
     _initialize();
   }
 
@@ -28,21 +39,31 @@ class _SplashScreenState extends State<SplashScreen> {
     if (mounted) {
       setState(() {
         _hasUser = !storage.isFirstLaunch();
-        _isLoading = false;
+        _ready = true;
       });
+      _controller.forward();
     }
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (!_ready) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    if (!_hasUser) {
-      return const OnboardingScreen();
-    }
-    return const AppShell();
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: _hasUser
+          ? const AppShell()
+          : const OnboardingScreen(),
+    );
   }
 }

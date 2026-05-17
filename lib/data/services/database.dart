@@ -153,9 +153,16 @@ class TodoItems {}
 
 class PomodoroSessions {}
 
-// Database
+  // Database
 class BirdleDatabase {
   Database? _db;
+
+  Database get _dbOrThrow {
+    if (_db == null) {
+      throw StateError('Database not initialized. Call open() first.');
+    }
+    return _db!;
+  }
 
   Future<void> open() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -209,79 +216,84 @@ class BirdleDatabase {
 
   // UserDao
   Future<void> insertUser(UsersData user) async {
-    await _db!.insert('users', user.toMap());
+    await _dbOrThrow.insert('users', user.toMap());
   }
 
   Future<UsersData?> getFirstUser() async {
-    final result = await _db!.query('users', limit: 1);
+    final result = await _dbOrThrow.query('users', limit: 1);
     if (result.isEmpty) return null;
     return UsersData.fromMap(result.first);
   }
 
   Future<void> updateUsers(UsersData user) async {
-    await _db!.update('users', user.toMap(), where: 'id = ?', whereArgs: [user.id]);
+    await _dbOrThrow.update('users', user.toMap(), where: 'id = ?', whereArgs: [user.id]);
   }
 
   // ListDao
   Future<void> insertTodoList(TodoListsData list) async {
-    await _db!.insert('todo_lists', list.toMap());
+    await _dbOrThrow.insert('todo_lists', list.toMap());
   }
 
   Future<List<TodoListsData>> getAllTodoLists() async {
-    final result = await _db!.query('todo_lists');
+    final result = await _dbOrThrow.query('todo_lists');
     return result.map(TodoListsData.fromMap).toList();
   }
 
   Future<TodoListsData?> getTodoListById(String id) async {
-    final result = await _db!.query('todo_lists', where: 'id = ?', whereArgs: [id]);
+    final result = await _dbOrThrow.query('todo_lists', where: 'id = ?', whereArgs: [id]);
     if (result.isEmpty) return null;
     return TodoListsData.fromMap(result.first);
   }
 
   Future<void> updateTodoList(TodoListsData list) async {
-    await _db!.update('todo_lists', list.toMap(), where: 'id = ?', whereArgs: [list.id]);
+    await _dbOrThrow.update('todo_lists', list.toMap(), where: 'id = ?', whereArgs: [list.id]);
   }
 
   Future<void> deleteTodoList(String id) async {
-    await _db!.delete('todo_lists', where: 'id = ?', whereArgs: [id]);
+    await _dbOrThrow.delete('todo_lists', where: 'id = ?', whereArgs: [id]);
   }
 
   // ItemDao
   Future<void> insertTodoItem(TodoItemsData item) async {
-    await _db!.insert('todo_items', item.toMap());
+    await _dbOrThrow.insert('todo_items', item.toMap());
   }
 
   Future<List<TodoItemsData>> getItemsByList(String listId) async {
-    final result = await _db!.query('todo_items', where: 'list_id = ?', whereArgs: [listId]);
+    final result = await _dbOrThrow.query('todo_items', where: 'list_id = ?', whereArgs: [listId]);
     return result.map(TodoItemsData.fromMap).toList();
   }
 
+  Future<int> countItemsByList(String listId) async {
+    final result = await _dbOrThrow.rawQuery('SELECT COUNT(*) FROM todo_items WHERE list_id = ?', [listId]);
+    return result.first.values.first as int;
+  }
+
   Future<TodoItemsData?> getTodoItemById(String id) async {
-    final result = await _db!.query('todo_items', where: 'id = ?', whereArgs: [id]);
+    final result = await _dbOrThrow.query('todo_items', where: 'id = ?', whereArgs: [id]);
     if (result.isEmpty) return null;
     return TodoItemsData.fromMap(result.first);
   }
 
   Future<void> updateTodoItem(TodoItemsData item) async {
-    await _db!.update('todo_items', item.toMap(), where: 'id = ?', whereArgs: [item.id]);
+    await _dbOrThrow.update('todo_items', item.toMap(), where: 'id = ?', whereArgs: [item.id]);
   }
 
   Future<void> deleteTodoItem(String id) async {
-    await _db!.delete('todo_items', where: 'id = ?', whereArgs: [id]);
+    await _dbOrThrow.delete('todo_items', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<TodoItemsData>> getPendingAlarms() async {
-    final result = await _db!.query('todo_items', where: 'alarm_day IS NOT NULL');
+    final result = await _dbOrThrow.query('todo_items', where: 'alarm_day IS NOT NULL');
     return result.map(TodoItemsData.fromMap).toList();
   }
 
   // PomodoroDao
   Future<void> insertPomodoroSession(PomodoroSessionsData session) async {
-    await _db!.insert('pomodoro_sessions', session.toMap());
+    await _dbOrThrow.insert('pomodoro_sessions', session.toMap());
   }
 
   Future<PomodoroSessionsData?> getActivePomodoro() async {
-    final result = await _db!.query(
+    final result = await _dbOrThrow.query(
       'pomodoro_sessions',
       where: 'status = ?',
       whereArgs: [PomodoroStatus.running.index],
@@ -293,7 +305,7 @@ class BirdleDatabase {
   }
 
   Future<void> updatePomodoroSession(PomodoroSessionsData session) async {
-    await _db!.update(
+    await _dbOrThrow.update(
       'pomodoro_sessions',
       session.toMap(),
       where: 'id = ?',
@@ -302,11 +314,11 @@ class BirdleDatabase {
   }
 
   Future<void> deletePomodoroSession(String id) async {
-    await _db!.delete('pomodoro_sessions', where: 'id = ?', whereArgs: [id]);
+    await _dbOrThrow.delete('pomodoro_sessions', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<PomodoroSessionsData>> getPomodoroHistory() async {
-    final result = await _db!.query(
+    final result = await _dbOrThrow.query(
       'pomodoro_sessions',
       orderBy: 'started_at DESC',
     );

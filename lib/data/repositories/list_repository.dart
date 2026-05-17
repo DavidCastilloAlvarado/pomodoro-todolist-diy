@@ -42,6 +42,10 @@ class ListRepository {
     await _db.deleteTodoList(id);
   }
 
+  Future<int> countItemsByList(String listId) async {
+    return _db.countItemsByList(listId);
+  }
+
   Future<TodoList?> getListById(String id) async {
     final data = await _db.getTodoListById(id);
     if (data == null) return null;
