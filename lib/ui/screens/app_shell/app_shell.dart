@@ -67,7 +67,7 @@ class _ListsViewState extends State<_ListsView> {
       builder: (dialogContext) => const ColorPickerDialog(),
     );
     if (pickedColor == null) return;
-    if (!mounted) return;
+    if (!context.mounted) return;
 
 
     // Step 2: Get list name

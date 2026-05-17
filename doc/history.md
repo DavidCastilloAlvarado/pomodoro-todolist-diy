@@ -48,3 +48,91 @@ Both imports are now correctly in place. `dart analyze` passes cleanly.
 Without a custom `sound` property, Android uses its **system default notification sound** automatically (since `playSound: true` is the channel default). No new resource files needed.
 
 **Note for testing:** Android notification channels are immutable after first creation. If the app was already installed with the broken channel, you may need to **uninstall and reinstall** (or clear app data) for the fix to take effect on your device.
+
+## Phase 6 — Fix alarms rejected as "in the past"
+
+**Status:** Completed
+
+**Bug:** Alarms set for times earlier than the current local time were rejected with:
+```
+Invalid argument (scheduledDate): Must be a date in the future
+```
+Alarms set 5+ hours ahead worked because they were still in the future.
+
+**Fix:**
+
+| File | Change |
+|---|---|
+| `lib/data/services/alarm_service.dart` | Added final guard: if computed `alarmTime.isBefore(now)`, advance `daysUntil` by 7 and recompute |
+| `lib/data/services/notification_service.dart` | Replaced `isAfter(now) \|\| isAtSameMomentAs(now)` with `!isBefore(now)` to fix microsecond precision comparison |
+
+The guard in `alarm_service.dart` catches any edge case where the computed alarm time ends up in the past. The `!isBefore(now)` fix in `notification_service.dart` eliminates the microsecond-precision bug that could cause the daily alarm to schedule for the wrong day.
+
+**Reviewer findings:** All 5 completion criteria met. `dart analyze` clean. Logic verified for all edge cases (same day, past time, next week, future day).
+
+## Phase 6 — Fix local timezone alarm scheduling
+
+**Status:** Completed
+
+**Bug:** User-selected alarm times were being interpreted with UTC semantics in the notification scheduling layer instead of the device's local timezone. On non-UTC devices such as Peru (UTC-5), a future local alarm like 01:56 at local time 00:54 could be converted into a past `TZDateTime`, causing:
+```
+Invalid argument (scheduledDate): Must be a date in the future
+```
+
+**Fix:**
+
+| File | Change |
+|---|---|
+| `pubspec.yaml` | Added `flutter_timezone` dependency so the app can resolve the device's actual timezone |
+| `lib/data/services/notification_service.dart` | Initialized `tz.local` from the device timezone before creating scheduled `TZDateTime` values |
+| `lib/data/services/alarm_service.dart` | Normalized next-occurrence calculations around local wall-clock time for daily and weekday alarms, including rollover to the next valid future occurrence |
+| `test/data/services/alarm_service_test.dart` | Added regression coverage for the Peru UTC-5 scenario and recurring scheduling behavior |
+
+The scheduling flow now preserves the user's intended local clock time instead of treating it like UTC. Daily alarms and weekday alarms continue to recur correctly, and past same-day occurrences are rolled forward to the next valid future local time.
+
+**Reviewer findings:** Approved. Task criteria satisfied. Targeted tests passed; `dart analyze` reported only two unrelated pre-existing info-level issues outside the task files.
+
+## Phase 6 — Fix alarm nowProvider runtime regression
+
+**Status:** Completed
+
+**Bug:** Alarm scheduling regressed with:
+```
+type 'Null' is not a subtype of type '() => DateTime' of 'function result'
+```
+The failure occurred in `AlarmService._nowProvider` during `scheduleAlarm()`, which meant alarm creation or update could crash before scheduling completed.
+
+**Fix:**
+
+| File | Change |
+|---|---|
+| `lib/data/services/alarm_service.dart` | Normalized `_nowProvider` to a guaranteed `DateTime Function()` on every construction path and wrapped injected providers so null results fall back to system time |
+| `lib/data/services/notification_service.dart` | Kept timezone-aware scheduling behavior aligned with the prior local-time fix |
+| `test/data/services/alarm_service_test.dart` | Added regression coverage for default construction, null-provider fallback, and preserved local scheduling behavior |
+
+The app's normal alarm update flow no longer crashes because the service always resolves a valid current-time callback before computing the next occurrence.
+
+**Reviewer findings:** Approved. Targeted alarm tests and `dart analyze` passed cleanly.
+
+## Phase 6 — Fix timezone plugin startup fallback
+
+**Status:** Completed
+
+**Bug:** App startup could fail after hot restart / plugin-registration edge cases with:
+```
+MissingPluginException(No implementation found for method getLocalTimezone on channel flutter_timezone)
+```
+The crash happened because `NotificationService.init()` eagerly awaited `FlutterTimezone.getLocalTimezone()` during startup, and the exception was allowed to abort initialization.
+
+**Fix:**
+
+| File | Change |
+|---|---|
+| `lib/data/services/notification_service.dart` | Hardened local timezone initialization to catch `MissingPluginException`, `PlatformException`, and related failures; preserved the normal device-timezone path; added fallback timezone resolution using a fixed-offset local location and UTC as final fallback |
+| `lib/main.dart` | Guarded startup/bootstrap so notification initialization failures are logged instead of crashing app launch; extracted a testable bootstrap path |
+| `test/data/services/alarm_service_test.dart` | Added regression coverage for successful device timezone initialization and failing timezone-provider fallback behavior |
+| `test/main_test.dart` | Added startup-path verification proving app bootstrap survives timezone plugin failure and still reaches rendering/alarm scheduling flow |
+
+The app now keeps startup alive even when the timezone plugin is temporarily unavailable, while still using the real device timezone whenever plugin resolution succeeds. Local wall-clock alarm scheduling behavior remains preserved as closely as possible through the fallback path.
+
+**Reviewer findings:** Approved. Startup-path verification added; targeted tests and `dart analyze` passed cleanly.
