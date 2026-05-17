@@ -138,39 +138,42 @@ class _ListsViewState extends State<_ListsView> {
           return const Center(child: CircularProgressIndicator());
         }
         return Scaffold(
-          body: RefreshIndicator(
-            onRefresh: () async {
-              await viewModel.loadLists();
-            },
-            child: GridView.builder(
-              padding: const EdgeInsets.all(12),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-              ),
-              itemCount: viewModel.lists.length,
-              itemBuilder: (context, index) {
-                final list = viewModel.lists[index];
-                return _ListCard(
-                  list: list,
-                  itemCount: viewModel.itemCounts[list.id] ?? 0,
-                  onTap: () async {
-                    await Navigator.of(context).pushNamed(
-                      '/item_detail',
-                      arguments: list.id,
-                    );
-                    if (context.mounted) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (context.mounted) {
-                          context.read<ListListViewModel>().reloadListCounts();
-                        }
-                      });
-                    }
-                  },
-                  onDelete: () => _confirmDelete(list.id, list.name),
-                );
+          body: SafeArea(
+            bottom: false,
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await viewModel.loadLists();
               },
+              child: GridView.builder(
+                padding: const EdgeInsets.all(12),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                ),
+                itemCount: viewModel.lists.length,
+                itemBuilder: (context, index) {
+                  final list = viewModel.lists[index];
+                  return _ListCard(
+                    list: list,
+                    itemCount: viewModel.itemCounts[list.id] ?? 0,
+                    onTap: () async {
+                      await Navigator.of(context).pushNamed(
+                        '/item_detail',
+                        arguments: list.id,
+                      );
+                      if (context.mounted) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (context.mounted) {
+                            context.read<ListListViewModel>().reloadListCounts();
+                          }
+                        });
+                      }
+                    },
+                    onDelete: () => _confirmDelete(list.id, list.name),
+                  );
+                },
+              ),
             ),
           ),
           floatingActionButton: FloatingActionButton(

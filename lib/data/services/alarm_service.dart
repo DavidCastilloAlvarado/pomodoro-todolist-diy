@@ -146,12 +146,27 @@ class AlarmService {
             'AlarmService: Scheduling daily alarm for "${item.title}" at ${alarm.time.hour}:${alarm.time.minute.toString().padLeft(2, '0')}',
           );
           // Schedule daily recurring notification
-          await _notificationService.scheduleDailyNotification(
-            id: item.id.hashCode.abs(),
-            title: item.title,
-            body: 'Reminder: ${item.title}',
-            time: alarm.time,
-            firstOccurrence: firstOccurrence,
+          final diagnostics = await _notificationService
+              .scheduleDailyNotification(
+                id: item.id.hashCode.abs(),
+                title: item.title,
+                body: 'Reminder: ${item.title}',
+                time: alarm.time,
+                firstOccurrence: firstOccurrence,
+              );
+          debugPrint(
+            'AlarmService: Daily delivery diagnostics -> ${diagnostics.toLogString()}',
+          );
+          await _notificationService.logPendingNotificationRequests(
+            context: 'schedule-daily-${item.id}',
+          );
+          debugPrint(
+            _notificationService.buildManualVerificationGuide(
+              notificationId: item.id.hashCode.abs(),
+              title: item.title,
+              scheduledTime: firstOccurrence,
+              scheduleMode: diagnostics.scheduleMode,
+            ),
           );
           debugPrint('AlarmService: Alarm scheduled OK for "${item.title}"');
           return;
@@ -169,11 +184,25 @@ class AlarmService {
             'AlarmService: Scheduling alarm for "${item.title}" — day: ${alarm.day}, time: ${alarm.time.hour}:${alarm.time.minute.toString().padLeft(2, '0')}, next local occurrence: $alarmTime',
           );
           // Schedule a one-time notification for that specific day/time
-          await _notificationService.scheduleNotification(
+          final diagnostics = await _notificationService.scheduleNotification(
             id: item.id.hashCode.abs(),
             title: item.title,
             body: 'Reminder: ${item.title}',
             scheduledTime: alarmTime,
+          );
+          debugPrint(
+            'AlarmService: Delivery diagnostics -> ${diagnostics.toLogString()}',
+          );
+          await _notificationService.logPendingNotificationRequests(
+            context: 'schedule-once-${item.id}',
+          );
+          debugPrint(
+            _notificationService.buildManualVerificationGuide(
+              notificationId: item.id.hashCode.abs(),
+              title: item.title,
+              scheduledTime: alarmTime,
+              scheduleMode: diagnostics.scheduleMode,
+            ),
           );
           debugPrint('AlarmService: Alarm scheduled OK for "${item.title}"');
           break;
@@ -194,6 +223,9 @@ class AlarmService {
   Future<void> reRegisterAllAlarms() async {
     try {
       final pendingItems = await _db.getPendingAlarms();
+      debugPrint(
+        'AlarmService: Re-registering ${pendingItems.length} persisted alarm(s) on startup',
+      );
       for (final itemData in pendingItems) {
         final alarmDay = itemData.alarmDay!;
         final alarmHour = itemData.alarmHour!;
@@ -214,6 +246,10 @@ class AlarmService {
 
         await scheduleAlarm(item);
       }
+
+      await _notificationService.logPendingNotificationRequests(
+        context: 'alarm-reregistration-complete',
+      );
     } catch (e, stack) {
       debugPrint('AlarmService: Failed to re-register alarms: $e\n$stack');
     }

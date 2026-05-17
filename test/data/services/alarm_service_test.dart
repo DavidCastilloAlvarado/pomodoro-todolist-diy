@@ -2,9 +2,46 @@ import 'package:birdle/data/models/todo_item.dart';
 import 'package:birdle/data/services/alarm_service.dart';
 import 'package:birdle/data/services/notification_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timezone/timezone.dart' as tz;
+
+NotificationScheduleDiagnostics _buildTestDiagnostics({
+  required int id,
+  required String title,
+  required String body,
+  DateTime? requestedLocalTime,
+  tz.TZDateTime? requestedZonedTime,
+}) {
+  final localTime = requestedLocalTime ?? DateTime(2024, 1, 1, 1, 56);
+  final zonedTime = requestedZonedTime ?? tz.TZDateTime.utc(2024, 1, 1, 1, 56);
+
+  return NotificationScheduleDiagnostics(
+    notificationId: id,
+    title: title,
+    body: body,
+    scheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    requestedLocalTime: localTime,
+    requestedZonedTime: zonedTime,
+    notificationsEnabled: true,
+    exactAlarmsEnabled: true,
+    timezoneName: zonedTime.location.name,
+    localTimezoneOffset: zonedTime.timeZoneOffset,
+    pendingRequestCount: 1,
+    appearsInPendingRequests: true,
+    matchingPendingRequest: PendingNotificationRequest(id, title, body, ''),
+    alarmChannel: const NotificationChannelDiagnostics(
+      id: NotificationService.alarmChannelId,
+      name: NotificationService.alarmChannelName,
+      description: NotificationService.alarmChannelDescription,
+      importance: NotificationService.alarmChannelImportance,
+      playSound: true,
+      enableVibration: true,
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+    ),
+  );
+}
 
 class FakeNotificationService extends NotificationService {
   FakeNotificationService()
@@ -18,17 +55,26 @@ class FakeNotificationService extends NotificationService {
   Future<void> init() async {}
 
   @override
-  Future<void> scheduleNotification({
+  Future<void> logPendingNotificationRequests({required String context}) async {}
+
+  @override
+  Future<NotificationScheduleDiagnostics> scheduleNotification({
     required int id,
     required String title,
     required String body,
     required DateTime scheduledTime,
   }) async {
     capturedScheduledTime = scheduledTime;
+    return _buildTestDiagnostics(
+      id: id,
+      title: title,
+      body: body,
+      requestedLocalTime: scheduledTime,
+    );
   }
 
   @override
-  Future<void> scheduleDailyNotification({
+  Future<NotificationScheduleDiagnostics> scheduleDailyNotification({
     required int id,
     required String title,
     required String body,
@@ -37,6 +83,12 @@ class FakeNotificationService extends NotificationService {
   }) async {
     capturedDailyTime = time;
     capturedDailyFirstOccurrence = firstOccurrence;
+    return _buildTestDiagnostics(
+      id: id,
+      title: title,
+      body: body,
+      requestedLocalTime: firstOccurrence,
+    );
   }
 }
 

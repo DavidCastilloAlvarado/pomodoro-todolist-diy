@@ -136,3 +136,62 @@ The crash happened because `NotificationService.init()` eagerly awaited `Flutter
 The app now keeps startup alive even when the timezone plugin is temporarily unavailable, while still using the real device timezone whenever plugin resolution succeeds. Local wall-clock alarm scheduling behavior remains preserved as closely as possible through the fallback path.
 
 **Reviewer findings:** Approved. Startup-path verification added; targeted tests and `dart analyze` passed cleanly.
+
+## Phase 4 — Fix alarm notification delivery
+
+**Status:** Completed
+
+**Bug:** Alarm scheduling completed successfully and logged a valid future local trigger time, but no notification appeared when the alarm became due.
+
+**Fix:**
+
+| File | Change |
+|---|---|
+| `android/app/src/main/AndroidManifest.xml` | Verified and enabled Android scheduled-notification delivery wiring for `flutter_local_notifications` receivers |
+| `android/app/build.gradle.kts` | Ensured Android build config remains compatible with scheduled delivery requirements |
+| `android/app/src/main/res/drawable/ic_stat_birdle.xml` | Added a dedicated notification small icon for reliable background/scheduled delivery |
+| `lib/data/services/notification_service.dart` | Added delivery diagnostics for permission state, exact alarms, channel details, timezone, schedule mode, and pending notification requests |
+| `lib/data/services/alarm_service.dart` | Preserved local wall-clock scheduling behavior while improving end-to-end scheduling diagnostics |
+| `lib/main.dart` | Kept startup ordering aligned with notification initialization and alarm re-registration requirements |
+
+The delivery path now uses Android-compatible notification resources and explicit diagnostics so scheduled alarms can be verified end-to-end on device without changing the previously fixed local-time calculation logic.
+
+**Reviewer findings:** Approved. No new automated/integration tests remain in this task. `dart analyze` passed cleanly.
+
+## Phase 6 — Fix Lists tab top padding
+
+**Status:** Completed
+
+**Issue:** The Lists tab grid started flush against the top of the screen, causing the first row of list cards to sit too close to the status bar/top edge.
+
+**Fix:**
+
+| File | Change |
+|---|---|
+| `lib/ui/screens/app_shell/app_shell.dart` | Wrapped the Lists tab scrollable content in `SafeArea(bottom: false)` so the grid respects the top inset while preserving the existing `RefreshIndicator`, two-column grid layout, card interactions, and floating add-list button behavior |
+
+The change is intentionally minimal and localized to the Lists tab layout so only the missing top inset is corrected.
+
+**Reviewer findings:** Approved. All completion criteria satisfied and `dart analyze` passed cleanly.
+
+## Phase 4 — Fix Android manifest keep instruction build failure
+
+**Status:** Completed
+
+**Bug:** `flutter run` failed during `:app:processDebugMainManifest` with:
+```
+Error: Invalid instruction 'keep', valid instructions are : REMOVE,REPLACE,STRICT,IGNORE_WARNING
+```
+The app manifest declared `tools:keep` on `<application>`, but `keep` is not a valid Android manifest-merger instruction.
+
+**Fix:**
+
+| File | Change |
+|---|---|
+| `android/app/src/main/AndroidManifest.xml` | Removed the unsupported `tools:keep` attribute and the now-unused `tools` XML namespace |
+| `android/app/src/main/res/drawable/ic_stat_birdle.xml` | Updated the inline comment so it no longer claims the icon is retained via the manifest |
+| `lib/data/services/notification_service.dart` | Corrected the stale comment describing how `ic_stat_birdle` is packaged/used as the Android notification small icon |
+
+The Android notification icon resource `ic_stat_birdle` remains available to the existing notification setup, but the unsupported manifest syntax is gone, allowing Android manifest processing to complete normally again.
+
+**Reviewer findings:** Approved. `flutter build apk --debug` succeeded and all completion criteria were satisfied.

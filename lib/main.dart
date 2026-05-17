@@ -20,6 +20,7 @@ Future<Widget> bootstrapBirdleApp({
   AppRunner? appRunner,
 }) async {
   WidgetsFlutterBinding.ensureInitialized();
+  debugPrint('Birdle bootstrap: start');
 
   await (preferredOrientationsSetter ?? SystemChrome.setPreferredOrientations)([
     DeviceOrientation.portraitUp,
@@ -31,24 +32,42 @@ Future<Widget> bootstrapBirdleApp({
         final storage = StorageService();
         await storage.init();
       })();
+  debugPrint('Birdle bootstrap: storage initialized');
 
   // Initialize notification service early so alarms can use it
   final resolvedNotificationService =
       notificationService ?? NotificationService();
   try {
+    debugPrint('Birdle bootstrap: initializing notification service');
     await resolvedNotificationService.init();
 
     // Request notification permission on Android 13+
-    await resolvedNotificationService.requestNotificationPermission();
+    final notificationsGranted = await resolvedNotificationService
+        .requestNotificationPermission();
+    if (!notificationsGranted) {
+      debugPrint(
+        'NotificationService: Notifications remain disabled after startup permission request',
+      );
+    }
 
     // Request exact alarm permission on Android 12+
-    final exactAlarmOk = await resolvedNotificationService
-        .requestExactAlarmPermission();
+    final exactAlarmAlreadyEnabled = await resolvedNotificationService
+        .canScheduleExactAlarms();
+    final exactAlarmOk = exactAlarmAlreadyEnabled
+        ? true
+        : await resolvedNotificationService.requestExactAlarmPermission();
     if (!exactAlarmOk) {
       debugPrint(
         'NotificationService: Could not grant exact alarm permission — alarms may not fire reliably',
       );
     }
+
+    await resolvedNotificationService.logEnvironmentDiagnostics(
+      context: 'startup-before-alarm-reregistration',
+    );
+    await resolvedNotificationService.logPendingNotificationRequests(
+      context: 'startup-before-alarm-reregistration',
+    );
   } catch (error, stackTrace) {
     debugPrint(
       'NotificationService: Startup initialization failed, continuing app startup: $error',
@@ -64,11 +83,19 @@ Future<Widget> bootstrapBirdleApp({
   try {
     database = (databaseFactory ?? BirdleDatabase.new)();
     await database.open();
+    debugPrint('Birdle bootstrap: database opened');
 
     // Initialize alarm service and re-register all alarms from DB
     final resolvedAlarmService = alarmService ?? AlarmService();
     resolvedAlarmService.init(database: database);
+    debugPrint('Birdle bootstrap: re-registering persisted alarms');
     await resolvedAlarmService.initAlarmManager();
+    await resolvedNotificationService.logEnvironmentDiagnostics(
+      context: 'startup-after-alarm-reregistration',
+    );
+    await resolvedNotificationService.logPendingNotificationRequests(
+      context: 'startup-after-alarm-reregistration',
+    );
   } catch (e, stack) {
     dbError = '$e\n$stack';
     debugPrint('Failed to initialize database: $dbError');
@@ -80,6 +107,8 @@ Future<Widget> bootstrapBirdleApp({
   } else {
     runApp(app);
   }
+
+  debugPrint('Birdle bootstrap: app launched');
 
   return app;
 }

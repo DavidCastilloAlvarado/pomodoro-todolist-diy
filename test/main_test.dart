@@ -5,6 +5,7 @@ import 'package:birdle/data/services/database.dart';
 import 'package:birdle/data/services/notification_service.dart';
 import 'package:birdle/main.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -45,10 +46,19 @@ class StartupFallbackNotificationService extends NotificationService {
   Future<bool> requestNotificationPermission() async => true;
 
   @override
+  Future<bool> canScheduleExactAlarms() async => true;
+
+  @override
   Future<bool> requestExactAlarmPermission() async => true;
 
   @override
-  Future<void> scheduleNotification({
+  Future<void> logEnvironmentDiagnostics({required String context}) async {}
+
+  @override
+  Future<void> logPendingNotificationRequests({required String context}) async {}
+
+  @override
+  Future<NotificationScheduleDiagnostics> scheduleNotification({
     required int id,
     required String title,
     required String body,
@@ -56,6 +66,30 @@ class StartupFallbackNotificationService extends NotificationService {
   }) async {
     capturedScheduledTime = scheduledTime;
     capturedWallClockSchedule = createWallClockSchedule(scheduledTime);
+    return NotificationScheduleDiagnostics(
+      notificationId: id,
+      title: title,
+      body: body,
+      scheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      requestedLocalTime: scheduledTime,
+      requestedZonedTime: capturedWallClockSchedule!,
+      notificationsEnabled: true,
+      exactAlarmsEnabled: true,
+      timezoneName: capturedWallClockSchedule!.location.name,
+      localTimezoneOffset: capturedWallClockSchedule!.timeZoneOffset,
+      pendingRequestCount: 1,
+      appearsInPendingRequests: true,
+      matchingPendingRequest: PendingNotificationRequest(id, title, body, ''),
+      alarmChannel: const NotificationChannelDiagnostics(
+        id: NotificationService.alarmChannelId,
+        name: NotificationService.alarmChannelName,
+        description: NotificationService.alarmChannelDescription,
+        importance: NotificationService.alarmChannelImportance,
+        playSound: true,
+        enableVibration: true,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+      ),
+    );
   }
 }
 
