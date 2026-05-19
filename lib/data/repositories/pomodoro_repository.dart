@@ -25,6 +25,8 @@ class PomodoroRepository {
           ? DateTime.fromMillisecondsSinceEpoch(data.endedAt!)
           : null,
       remaining: Duration(seconds: data.remaining),
+      currentPhase: data.currentPhase,
+      completedSessions: data.completedSessions,
     );
   }
 
@@ -38,6 +40,8 @@ class PomodoroRepository {
       startedAt: session.startedAt.millisecondsSinceEpoch,
       endedAt: session.endedAt?.millisecondsSinceEpoch,
       remaining: session.remaining.inSeconds,
+      currentPhase: session.currentPhase,
+      completedSessions: session.completedSessions,
     ));
     await _foregroundTask.startPomodoroTask(session);
   }
@@ -56,6 +60,8 @@ class PomodoroRepository {
         startedAt: updated.startedAt.millisecondsSinceEpoch,
         endedAt: updated.endedAt?.millisecondsSinceEpoch,
         remaining: updated.remaining.inSeconds,
+        currentPhase: updated.currentPhase,
+        completedSessions: updated.completedSessions,
       ));
     }
   }
@@ -74,6 +80,8 @@ class PomodoroRepository {
         startedAt: updated.startedAt.millisecondsSinceEpoch,
         endedAt: updated.endedAt?.millisecondsSinceEpoch,
         remaining: updated.remaining.inSeconds,
+        currentPhase: updated.currentPhase,
+        completedSessions: updated.completedSessions,
       ));
     }
   }
@@ -96,7 +104,17 @@ class PomodoroRepository {
         startedAt: updated.startedAt.millisecondsSinceEpoch,
         endedAt: updated.endedAt?.millisecondsSinceEpoch,
         remaining: updated.remaining.inSeconds,
+        currentPhase: updated.currentPhase,
+        completedSessions: updated.completedSessions,
       ));
+    }
+  }
+
+  Future<void> deleteActiveSession() async {
+    await _foregroundTask.stopPomodoroTask();
+    final session = await getActiveSession();
+    if (session != null) {
+      await _db.deletePomodoroSession(session.id);
     }
   }
 
@@ -113,6 +131,8 @@ class PomodoroRepository {
           ? DateTime.fromMillisecondsSinceEpoch(d.endedAt!)
           : null,
       remaining: Duration(seconds: d.remaining),
+      currentPhase: d.currentPhase,
+      completedSessions: d.completedSessions,
     )).toList();
   }
 }

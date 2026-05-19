@@ -9,6 +9,7 @@ import 'package:birdle/data/services/notification_service.dart';
 import 'package:birdle/data/services/storage_service.dart';
 import 'package:birdle/ui/view_models/list_list_view_model.dart';
 import 'package:birdle/ui/view_models/palette_view_model.dart';
+import 'package:birdle/ui/view_models/pomodoro_config_view_model.dart';
 import 'package:birdle/ui/view_models/pomodoro_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
@@ -69,9 +70,16 @@ List<SingleChildWidget> buildProviders({BirdleDatabase? database}) {
         repository: ctx.read<ListRepository>(),
       ),
     ),
+    // PomodoroConfigViewModel must come before PomodoroViewModel
+    ChangeNotifierProvider<PomodoroConfigViewModel>(
+      create: (ctx) => PomodoroConfigViewModel(
+        storage: ctx.read<StorageService>(),
+      ),
+    ),
     ChangeNotifierProvider<PomodoroViewModel>(
       create: (ctx) => PomodoroViewModel(
         repository: ctx.read<PomodoroRepository>(),
+        config: ctx.read<PomodoroConfigViewModel>(),
       ),
     ),
   ];

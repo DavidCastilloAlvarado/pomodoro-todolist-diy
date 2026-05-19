@@ -1,5 +1,7 @@
 enum PomodoroStatus { idle, running, paused, completed }
 
+enum PomodoroPhase { work, shortBreak, longBreak }
+
 class PomodoroSession {
   final String id;
   final String itemTitle;
@@ -9,6 +11,8 @@ class PomodoroSession {
   final DateTime startedAt;
   final DateTime? endedAt;
   final Duration remaining;
+  final int currentPhase;
+  final int completedSessions;
 
   const PomodoroSession({
     required this.id,
@@ -19,6 +23,8 @@ class PomodoroSession {
     required this.startedAt,
     this.endedAt,
     required this.remaining,
+    this.currentPhase = 0,
+    this.completedSessions = 0,
   });
 
   Map<String, dynamic> toMap() {
@@ -31,6 +37,8 @@ class PomodoroSession {
       'started_at': startedAt.millisecondsSinceEpoch,
       'ended_at': endedAt?.millisecondsSinceEpoch,
       'remaining': remaining.inSeconds,
+      'current_phase': currentPhase,
+      'completed_sessions': completedSessions,
     };
   }
 
@@ -46,6 +54,8 @@ class PomodoroSession {
           ? DateTime.fromMillisecondsSinceEpoch(map['ended_at'] as int)
           : null,
       remaining: Duration(seconds: map['remaining'] as int),
+      currentPhase: map['current_phase'] as int? ?? 0,
+      completedSessions: map['completed_sessions'] as int? ?? 0,
     );
   }
 
@@ -53,6 +63,8 @@ class PomodoroSession {
     PomodoroStatus? status,
     DateTime? endedAt,
     Duration? remaining,
+    int? currentPhase,
+    int? completedSessions,
   }) {
     return PomodoroSession(
       id: id,
@@ -63,6 +75,8 @@ class PomodoroSession {
       startedAt: startedAt,
       endedAt: endedAt ?? this.endedAt,
       remaining: remaining ?? this.remaining,
+      currentPhase: currentPhase ?? this.currentPhase,
+      completedSessions: completedSessions ?? this.completedSessions,
     );
   }
 

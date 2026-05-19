@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
@@ -39,4 +41,84 @@ class StorageService {
   Future<void> completeOnboarding() async {
     await _prefs?.setBool(_kOnboardingKey, true);
   }
+
+  // ── Pomodoro duration config ──────────────────────────────────────
+
+  static const _kPomoWorkKey = 'birdle_pomodoro_work_minutes';
+  static const _kPomoBreakKey = 'birdle_pomodoro_break_minutes';
+  static const _kPomoLongBreakKey = 'birdle_pomodoro_long_break_minutes';
+
+  int getPomodoroWorkMinutes() {
+    return _prefs?.getInt(_kPomoWorkKey) ?? 25;
+  }
+
+  int getPomodoroBreakMinutes() {
+    return _prefs?.getInt(_kPomoBreakKey) ?? 5;
+  }
+
+  int getPomodoroLongBreakMinutes() {
+    return _prefs?.getInt(_kPomoLongBreakKey) ?? 15;
+  }
+
+  Future<void> savePomodoroDurations({
+    required int workMinutes,
+    required int breakMinutes,
+    required int longBreakMinutes,
+  }) async {
+    await _prefs?.setInt(_kPomoWorkKey, workMinutes);
+    await _prefs?.setInt(_kPomoBreakKey, breakMinutes);
+    await _prefs?.setInt(_kPomoLongBreakKey, longBreakMinutes);
+  }
+
+  // ── Pomodoro color config ─────────────────────────────────────────
+
+  static const _kPomoWorkColorKey = 'birdle_pomodoro_work_color';
+  static const _kPomoBreakColorKey = 'birdle_pomodoro_break_color';
+  static const _kPomoLongBreakColorKey = 'birdle_pomodoro_long_break_color';
+
+  Color? getPomodoroWorkColor() {
+    final hex = _prefs?.getString(_kPomoWorkColorKey);
+    if (hex == null || hex.isEmpty) return null;
+    return Color(int.parse(hex, radix: 16) | 0xFF000000);
+  }
+
+  Color? getPomodoroBreakColor() {
+    final hex = _prefs?.getString(_kPomoBreakColorKey);
+    if (hex == null || hex.isEmpty) return null;
+    return Color(int.parse(hex, radix: 16) | 0xFF000000);
+  }
+
+  Color? getPomodoroLongBreakColor() {
+    final hex = _prefs?.getString(_kPomoLongBreakColorKey);
+    if (hex == null || hex.isEmpty) return null;
+    return Color(int.parse(hex, radix: 16) | 0xFF000000);
+  }
+
+  Future<void> savePomodoroColors({
+    required Color? workColor,
+    required Color? breakColor,
+    required Color? longBreakColor,
+  }) async {
+    await _prefs?.setString(_kPomoWorkColorKey, _toHex(workColor));
+    await _prefs?.setString(_kPomoBreakColorKey, _toHex(breakColor));
+    await _prefs?.setString(_kPomoLongBreakColorKey, _toHex(longBreakColor));
+  }
+
+  static String _toHex(Color? c) => c != null ? c.toARGB32().toRadixString(16) : '';
+
+  // Legacy key (kept for migration compatibility)
+  static const _kPomoDurationsKey = 'birdle_pomodoro_durations';
+
+  List<int> getPomodoroDurations() {
+    final raw = _prefs?.getString(_kPomoDurationsKey);
+    if (raw == null || raw.isEmpty) return [];
+    return raw.split(',').map(int.parse).toList();
+  }
+
+  Future<void> savePomodoroDurationsLegacy(List<int> durations) async {
+    await _prefs?.setString(_kPomoDurationsKey, durations.join(','));
+  }
+
+  // Default durations available to the user
+  static const List<int> defaultPomodoroDurations = [25, 50, 75];
 }

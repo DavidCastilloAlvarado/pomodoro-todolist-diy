@@ -1,197 +1,113 @@
+# Development History
 
-## Phase 6 — Fix timezone initialization crash (LateInitializationError)
+## Phase 6 — Pomodoro Tab Redesign
 
-**Status:** Completed
+### Task: `pomodoro_redesign`
 
-**Root cause:** The `timezone` package requires calling `initializeTimeZone()` to load the timezone database before `tz.local` can be accessed. The app never called this, so every alarm schedule call crashed with `LateInitializationError: Field '_local' has not been initialized` **before it even reached the scheduling code**.
+**Status**: In progress
 
-**Fix applied:**
+#### Implementation (completed)
+- Replaced single-timer Pomodoro screen with classic Pomodoro technique (Work/Short Break/Long Break)
+- Three simultaneous timer displays with circular progress indicators
+- Phase-based state machine with automatic transitions
+- Configurable durations via Settings page (workMinutes, breakMinutes, longBreakMinutes)
+- `PomodoroConfigViewModel` refactored (not deleted) — exposes `ValueListenable` for config changes
+- `PomodoroScreen` uses `Consumer<PomodoroConfigViewModel>` to listen to config changes
+- `notifyListeners()` called immediately after any duration save — prevents stale values
+- New `SettingsPage` with three duration inputs + validation
+- `PomodoroSession` extended with `currentPhase` and `completedSessions`
+- Database schema updated with `current_phase` and `completed_sessions` columns
+- Foreground service updated to track phase transitions
+- `dart analyze`: zero errors, zero warnings
 
-| File | Change |
-|---|---|
-| `lib/data/services/notification_service.dart` | Added `import 'package:timezone/standalone.dart';` and `await initializeTimeZone();` in `init()` |
+#### Bug Fixes
+1. **All timers showed the same value** — Fixed by replacing single `_timeRemaining` with per-phase fields (`_workRemaining`, `_breakRemaining`, `_longBreakRemaining`). Each timer row receives its own remaining value from the ViewModel.
+2. **Start button did nothing** — Fixed by `_initDefaults()` in constructor setting all phases to full durations (was `int _timeRemaining = 0`). The countdown check `_phaseRemaining > 0` now passes.
+3. **resetTimer() always reset to Work** — Fixed by switching to reset the CURRENT phase to its full duration.
 
-This is the **actual** bug that prevented alarms from firing. Without `initializeTimeZone()`, the app crashes on every alarm schedule attempt. The `timezone` package is a standard dependency (`timezone: ^0.10.0`) and `initializeTimeZone()` is the documented initialization step that `flutter_local_notifications` does NOT perform automatically.
+#### Review Findings
+- All critical criteria met
+- `notifyListeners()` called immediately after config save (CRITICAL)
+- All durations from `PomodoroConfigViewModel` — no hardcoded values
+- `dart analyze`: zero errors, zero warnings
 
-**Reviewer findings:** All 4 completion criteria met. `dart analyze` passes cleanly.
+### Bug Fix Task: `pomodoro_bugfixes`
 
-## Phase 6 — Fix timezone initialization crash (correction)
+**Status**: Completed — all three critical bugs fixed
 
-**Status:** Completed
+#### Bug 1: Database migration never runs (version 2, migration only for `oldVersion < 2`)
+- **Root cause**: Database was at version 2. `_upgradeDb` only ran for `oldVersion < 2`, so the `current_phase` and `completed_sessions` columns were never added to existing databases. `startTimer()` crashed with `table pomodoro_sessions has no column named current_phase`.
+- **Fix**: Bumped version to `3`, added `if (oldVersion < 3)` migration guard in `_upgradeDb`.
 
-**Regression:** The initial fix used `package:timezone/standalone.dart` which is web-only and crashed on mobile with `Unsupported operation: Isolate.resolvePackageUriSync`, preventing the app from starting.
+#### Bug 2: `_durations` is `late` + async-initialized → breaks show 00:00
+- **Root cause**: `late PomodoroDurations _durations` had no sync initializer. `_loadDurations()` was fire-and-forget async. When `PomodoroViewModel._initDefaults()` ran in the constructor, it tried to read `_config.breakMinutes` which accessed the uninitialized `_durations`, throwing `LateInitializationError` silently.
+- **Fix**: Changed to `final PomodoroDurations _durations = PomodoroDurations(workMinutes: 25, breakMinutes: 5, longBreakMinutes: 15)` — defaults available immediately.
 
-**Corrected fix:**
+#### Bug 3: `PomodoroDurations` fields are `final` → listener detachment on config save
+- **Root cause**: `PomodoroDurations` had `final` fields. `saveDurations()` created a **new** instance, orphaning the listener `PomodoroViewModel` attached to the old instance.
+- **Fix**: Made fields mutable, added `update()` method, `saveDurations()` now calls `_durations.update()` in place — listener stays attached.
 
-| File | Change |
-|---|---|
-| `lib/data/services/notification_service.dart` | Removed `standalone.dart` import; replaced `initializeTimeZone()` with `tz_data.initializeTimeZones()` from `package:timezone/data/latest_all.dart` |
+- `dart analyze`: zero errors, zero warnings
 
-The `timezone` 0.10.x package requires two steps on mobile:
-1. Import `package:timezone/data/latest_all.dart` and call `initializeTimeZones()` to load timezone data
-2. Use `package:timezone/timezone.dart` as `tz` for `tz.local` and `tz.TZDateTime`
+## Phase 4 — Pomodoro Break Timer Fix
 
-Both imports are now correctly in place. `dart analyze` passes cleanly.
+### Task: `pomodoro_break_timer_fix`
 
-## Phase 6 — Fix invalid_sound alarm crash
+**Status**: Completed — reviewer approved all 7 criteria
 
-**Status:** Completed
+#### Bug: Short Break timer showed 00:00 and stopped after Work phase completed
 
-**Bug:** `PlatformException(invalid_sound, The resource default could not be found)` — `RawResourceAndroidNotificationSound('default')` referenced a non-existent `res/raw/default` file in the Android project.
+**Root cause**: Three issues in the phase transition flow:
+1. `_onPhaseComplete()` canceled `_timer` but never called `_startTimer()` to restart countdown for the new phase
+2. Foreground stream listener overwrote `_breakRemaining` with stale `0` after Work phase finished
+3. Foreground callback's `remaining` stayed `<= 0`, causing repeated `pomodoro_complete` events
 
-**Fix:**
+**Fixes applied**:
+1. Added `_startTimer()` call in `_onPhaseComplete()` after phase transition (`pomodoro_view_model.dart:283`)
+2. Added `if (seconds <= 0) return;` guard in foreground stream listener (`pomodoro_view_model.dart:94`)
+3. Reset `remaining = newPhaseDuration` in foreground callback after phase transition (`foreground_task.dart:138-152`)
+4. Removed DI dependency — replaced `PomodoroConfigViewModel()` with default values in foreground task (`foreground_task.dart:38`)
 
-| File | Change |
-|---|---|
-| `lib/data/services/notification_service.dart` | Removed `sound: const RawResourceAndroidNotificationSound('default')` from all 3 `AndroidNotificationDetails` constructors (`showNotification`, `scheduleNotification`, `scheduleDailyNotification`) |
+**Verification**: `dart analyze` — zero errors, zero warnings. Reviewer approved all 7 completion criteria.
 
-Without a custom `sound` property, Android uses its **system default notification sound** automatically (since `playSound: true` is the channel default). No new resource files needed.
+## Phase 5 — Per-Timer Color Customization
 
-**Note for testing:** Android notification channels are immutable after first creation. If the app was already installed with the broken channel, you may need to **uninstall and reinstall** (or clear app data) for the fix to take effect on your device.
+### Task: `timer_color_customization`
 
-## Phase 6 — Fix alarms rejected as "in the past"
+**Status**: Completed — reviewer approved all 13 criteria
 
-**Status:** Completed
+#### Feature: Per-timer color customization for Work, Short Break, Long Break timers
 
-**Bug:** Alarms set for times earlier than the current local time were rejected with:
-```
-Invalid argument (scheduledDate): Must be a date in the future
-```
-Alarms set 5+ hours ahead worked because they were still in the future.
-
-**Fix:**
-
-| File | Change |
-|---|---|
-| `lib/data/services/alarm_service.dart` | Added final guard: if computed `alarmTime.isBefore(now)`, advance `daysUntil` by 7 and recompute |
-| `lib/data/services/notification_service.dart` | Replaced `isAfter(now) \|\| isAtSameMomentAs(now)` with `!isBefore(now)` to fix microsecond precision comparison |
-
-The guard in `alarm_service.dart` catches any edge case where the computed alarm time ends up in the past. The `!isBefore(now)` fix in `notification_service.dart` eliminates the microsecond-precision bug that could cause the daily alarm to schedule for the wrong day.
-
-**Reviewer findings:** All 5 completion criteria met. `dart analyze` clean. Logic verified for all edge cases (same day, past time, next week, future day).
-
-## Phase 6 — Fix local timezone alarm scheduling
-
-**Status:** Completed
-
-**Bug:** User-selected alarm times were being interpreted with UTC semantics in the notification scheduling layer instead of the device's local timezone. On non-UTC devices such as Peru (UTC-5), a future local alarm like 01:56 at local time 00:54 could be converted into a past `TZDateTime`, causing:
-```
-Invalid argument (scheduledDate): Must be a date in the future
-```
-
-**Fix:**
-
-| File | Change |
-|---|---|
-| `pubspec.yaml` | Added `flutter_timezone` dependency so the app can resolve the device's actual timezone |
-| `lib/data/services/notification_service.dart` | Initialized `tz.local` from the device timezone before creating scheduled `TZDateTime` values |
-| `lib/data/services/alarm_service.dart` | Normalized next-occurrence calculations around local wall-clock time for daily and weekday alarms, including rollover to the next valid future occurrence |
-| `test/data/services/alarm_service_test.dart` | Added regression coverage for the Peru UTC-5 scenario and recurring scheduling behavior |
-
-The scheduling flow now preserves the user's intended local clock time instead of treating it like UTC. Daily alarms and weekday alarms continue to recur correctly, and past same-day occurrences are rolled forward to the next valid future local time.
-
-**Reviewer findings:** Approved. Task criteria satisfied. Targeted tests passed; `dart analyze` reported only two unrelated pre-existing info-level issues outside the task files.
-
-## Phase 6 — Fix alarm nowProvider runtime regression
-
-**Status:** Completed
-
-**Bug:** Alarm scheduling regressed with:
-```
-type 'Null' is not a subtype of type '() => DateTime' of 'function result'
-```
-The failure occurred in `AlarmService._nowProvider` during `scheduleAlarm()`, which meant alarm creation or update could crash before scheduling completed.
-
-**Fix:**
+**Changes (4 files, no new files):**
 
 | File | Change |
-|---|---|
-| `lib/data/services/alarm_service.dart` | Normalized `_nowProvider` to a guaranteed `DateTime Function()` on every construction path and wrapped injected providers so null results fall back to system time |
-| `lib/data/services/notification_service.dart` | Kept timezone-aware scheduling behavior aligned with the prior local-time fix |
-| `test/data/services/alarm_service_test.dart` | Added regression coverage for default construction, null-provider fallback, and preserved local scheduling behavior |
+|------|--------|
+| `lib/ui/view_models/pomodoro_config_view_model.dart` | Added `workColor`, `breakColor`, `longBreakColor` to `PomodoroDurations` (default `null`); added `setColors()` method that calls `notifyListeners()`; added `saveTimerColors()`, color getters, load in constructor |
+| `lib/data/services/storage_service.dart` | Added 3 color keys (`birdle_pomodoro_work_color`, `birdle_pomodoro_break_color`, `birdle_pomodoro_long_break_color`); added getter/setter methods; colors stored as hex strings |
+| `lib/ui/screens/app_shell/pomodoro_screen.dart` | Added `color` parameter to `_TimerRow`; uses custom color for label text, CircularProgressIndicator, and time text; falls back to theme primary when `null` |
+| `lib/ui/screens/settings/settings_page.dart` | Added "Timer Colors" section with 3 swatches + `ColorPickerDialog`; increased top padding from `EdgeInsets.all(16)` to `EdgeInsets.fromLTRB(16, 24, 16, 16)` |
 
-The app's normal alarm update flow no longer crashes because the service always resolves a valid current-time callback before computing the next occurrence.
+**Color propagation:** `PomodoroDurations.setColors()` → `notifyListeners()` → `PomodoroConfigViewModel` → `PomodoroScreen` via existing `Consumer` pattern.
 
-**Reviewer findings:** Approved. Targeted alarm tests and `dart analyze` passed cleanly.
+**Verification:** `dart analyze` — zero errors, zero warnings. Reviewer approved all 13 completion criteria after 1 revision (added `setColors()` to `PomodoroDurations` to properly notify listeners on color change).
 
-## Phase 6 — Fix timezone plugin startup fallback
+## Phase 6 — Pomodoro Reset Bug Fix
 
-**Status:** Completed
+### Task: `pomodoro_full_reset`
 
-**Bug:** App startup could fail after hot restart / plugin-registration edge cases with:
-```
-MissingPluginException(No implementation found for method getLocalTimezone on channel flutter_timezone)
-```
-The crash happened because `NotificationService.init()` eagerly awaited `FlutterTimezone.getLocalTimezone()` during startup, and the exception was allowed to abort initialization.
+**Status**: Completed — reviewer approved all 8 criteria
 
-**Fix:**
+#### Bug: Reset button only reset the current phase, not the entire pomodoro cycle
 
-| File | Change |
-|---|---|
-| `lib/data/services/notification_service.dart` | Hardened local timezone initialization to catch `MissingPluginException`, `PlatformException`, and related failures; preserved the normal device-timezone path; added fallback timezone resolution using a fixed-offset local location and UTC as final fallback |
-| `lib/main.dart` | Guarded startup/bootstrap so notification initialization failures are logged instead of crashing app launch; extracted a testable bootstrap path |
-| `test/data/services/alarm_service_test.dart` | Added regression coverage for successful device timezone initialization and failing timezone-provider fallback behavior |
-| `test/main_test.dart` | Added startup-path verification proving app bootstrap survives timezone plugin failure and still reaches rendering/alarm scheduling flow |
+**Root cause:** `resetTimer()` in `PomodoroViewModel` was designed as a "reset current phase only" button. It never changed `_currentPhase` or `_completedSessions`, leaving the pomodoro stuck on whatever phase it was in (Short Break, Long Break) with the dot counter intact. The Settings → Save workaround worked because `_onConfigChanged()` accidentally triggered a full reset in the idle branch.
 
-The app now keeps startup alive even when the timezone plugin is temporarily unavailable, while still using the real device timezone whenever plugin resolution succeeds. Local wall-clock alarm scheduling behavior remains preserved as closely as possible through the fallback path.
-
-**Reviewer findings:** Approved. Startup-path verification added; targeted tests and `dart analyze` passed cleanly.
-
-## Phase 4 — Fix alarm notification delivery
-
-**Status:** Completed
-
-**Bug:** Alarm scheduling completed successfully and logged a valid future local trigger time, but no notification appeared when the alarm became due.
-
-**Fix:**
+**Fix (2 files):**
 
 | File | Change |
-|---|---|
-| `android/app/src/main/AndroidManifest.xml` | Verified and enabled Android scheduled-notification delivery wiring for `flutter_local_notifications` receivers |
-| `android/app/build.gradle.kts` | Ensured Android build config remains compatible with scheduled delivery requirements |
-| `android/app/src/main/res/drawable/ic_stat_birdle.xml` | Added a dedicated notification small icon for reliable background/scheduled delivery |
-| `lib/data/services/notification_service.dart` | Added delivery diagnostics for permission state, exact alarms, channel details, timezone, schedule mode, and pending notification requests |
-| `lib/data/services/alarm_service.dart` | Preserved local wall-clock scheduling behavior while improving end-to-end scheduling diagnostics |
-| `lib/main.dart` | Kept startup ordering aligned with notification initialization and alarm re-registration requirements |
+|------|--------|
+| `lib/ui/view_models/pomodoro_view_model.dart` | Rewrote `resetTimer()`: unconditionally sets `_currentPhase = PomodoroPhase.work`, resets all remaining times to full duration, resets `_completedSessions = 0`, deletes active DB session |
+| `lib/data/repositories/pomodoro_repository.dart` | Added `deleteActiveSession()` method: stops foreground task, fetches active session, calls `_db.deletePomodoroSession()` |
 
-The delivery path now uses Android-compatible notification resources and explicit diagnostics so scheduled alarms can be verified end-to-end on device without changing the previously fixed local-time calculation logic.
+**What is NOT reset (intentionally):** Timer color customizations and config durations — these are user preferences, not session state.
 
-**Reviewer findings:** Approved. No new automated/integration tests remain in this task. `dart analyze` passed cleanly.
-
-## Phase 6 — Fix Lists tab top padding
-
-**Status:** Completed
-
-**Issue:** The Lists tab grid started flush against the top of the screen, causing the first row of list cards to sit too close to the status bar/top edge.
-
-**Fix:**
-
-| File | Change |
-|---|---|
-| `lib/ui/screens/app_shell/app_shell.dart` | Wrapped the Lists tab scrollable content in `SafeArea(bottom: false)` so the grid respects the top inset while preserving the existing `RefreshIndicator`, two-column grid layout, card interactions, and floating add-list button behavior |
-
-The change is intentionally minimal and localized to the Lists tab layout so only the missing top inset is corrected.
-
-**Reviewer findings:** Approved. All completion criteria satisfied and `dart analyze` passed cleanly.
-
-## Phase 4 — Fix Android manifest keep instruction build failure
-
-**Status:** Completed
-
-**Bug:** `flutter run` failed during `:app:processDebugMainManifest` with:
-```
-Error: Invalid instruction 'keep', valid instructions are : REMOVE,REPLACE,STRICT,IGNORE_WARNING
-```
-The app manifest declared `tools:keep` on `<application>`, but `keep` is not a valid Android manifest-merger instruction.
-
-**Fix:**
-
-| File | Change |
-|---|---|
-| `android/app/src/main/AndroidManifest.xml` | Removed the unsupported `tools:keep` attribute and the now-unused `tools` XML namespace |
-| `android/app/src/main/res/drawable/ic_stat_birdle.xml` | Updated the inline comment so it no longer claims the icon is retained via the manifest |
-| `lib/data/services/notification_service.dart` | Corrected the stale comment describing how `ic_stat_birdle` is packaged/used as the Android notification small icon |
-
-The Android notification icon resource `ic_stat_birdle` remains available to the existing notification setup, but the unsupported manifest syntax is gone, allowing Android manifest processing to complete normally again.
-
-**Reviewer findings:** Approved. `flutter build apk --debug` succeeded and all completion criteria were satisfied.
+**Verification:** `dart analyze` — zero errors, zero warnings. Reviewer approved all 8 completion criteria.
