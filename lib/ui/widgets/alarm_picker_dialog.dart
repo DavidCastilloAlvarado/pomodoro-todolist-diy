@@ -3,6 +3,32 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:birdle/data/models/todo_item.dart';
 import 'package:birdle/data/services/notification_service.dart';
 
+/// Result type for the alarm picker dialog.
+///
+/// Used to distinguish between:
+/// - [AlarmSet] — user picked a new alarm
+/// - [AlarmRemoved] — user explicitly removed the alarm
+/// - [AlarmDismissed] — user dismissed the dialog without making a choice
+sealed class AlarmPickerResult {
+  const AlarmPickerResult();
+}
+
+/// The user picked a new alarm in the picker dialog.
+class AlarmSet extends AlarmPickerResult {
+  const AlarmSet(this.alarm);
+  final AlarmInfo alarm;
+}
+
+/// The user explicitly removed the alarm.
+class AlarmRemoved extends AlarmPickerResult {
+  const AlarmRemoved();
+}
+
+/// The user dismissed the dialog without making a choice.
+class AlarmDismissed extends AlarmPickerResult {
+  const AlarmDismissed();
+}
+
 class AlarmPickerDialog extends StatefulWidget {
   const AlarmPickerDialog({super.key, this.initialAlarm});
 
@@ -73,12 +99,16 @@ class _AlarmPickerDialogState extends State<AlarmPickerDialog> {
       }
     }
     if (mounted) {
-      Navigator.of(context).pop<AlarmInfo?>(alarmInfo);
+      Navigator.of(context).pop<AlarmPickerResult>(AlarmSet(alarmInfo));
     }
   }
 
+  void _clear() {
+    Navigator.of(context).pop<AlarmPickerResult>(const AlarmRemoved());
+  }
+
   void _cancel() {
-    Navigator.of(context).pop<AlarmInfo?>(null);
+    Navigator.of(context).pop<AlarmPickerResult>(const AlarmDismissed());
   }
 
   @override
@@ -161,6 +191,11 @@ class _AlarmPickerDialogState extends State<AlarmPickerDialog> {
           onPressed: _cancel,
           child: const Text('Cancel'),
         ),
+        if (widget.initialAlarm != null)
+          TextButton(
+            onPressed: _clear,
+            child: const Text('Clear'),
+          ),
         FilledButton(
           onPressed: _ok,
           child: const Text('OK'),

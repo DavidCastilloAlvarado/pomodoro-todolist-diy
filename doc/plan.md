@@ -91,6 +91,8 @@ SplashScreen (image, 2s)
 14. Create BootReceiver that re-registers all pending alarms after device restart
 15. Set up `flutter_local_notifications` for notification display (works with screen off)
 16. Android manifest permissions: `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE`, `WAKE_LOCK`, `SCHEDULE_EXACT_ALARM`
+16a. Allow removing item alarms from the item detail flow and automatically cancel pending item alarms when an item is marked completed
+16b. Block alarm scheduling on completed items — prevent alarm modification UI and repository guard for completed items
 
 ### Phase 5 — Pomodoro
 

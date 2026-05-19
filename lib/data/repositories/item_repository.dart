@@ -52,6 +52,8 @@ class ItemRepository {
   }
 
   Future<void> updateItem(TodoItem item) async {
+    // Determine if the alarm is being removed (was non-null, now null).
+    final wasAlarmSet = item.alarm != null;
     await _db.updateTodoItem(TodoItemsData(
       id: item.id,
       listId: item.listId,
@@ -63,8 +65,13 @@ class ItemRepository {
       alarmMinute: item.alarm?.time.minute,
       createdAt: item.createdAt.millisecondsSinceEpoch,
     ));
-    if (item.alarm != null) {
+    // Only schedule alarms for non-completed items.
+    if (item.alarm != null && !item.completed) {
       await _alarm.scheduleAlarm(item);
+    }
+    // If the alarm was previously set but is now being cleared, cancel it.
+    if (wasAlarmSet && item.alarm == null) {
+      await _alarm.cancelAlarm(item.id);
     }
   }
 
@@ -109,9 +116,22 @@ class ItemRepository {
     await _db.deleteTodoItem(itemId);
   }
 
+  /// Cancel the alarm for the given item.
+  Future<void> cancelAlarm(String itemId) async {
+    await _alarm.cancelAlarm(itemId);
+  }
+
+  /// Schedule an alarm for the given item.
+  Future<void> scheduleAlarm(TodoItem item) async {
+    await _alarm.scheduleAlarm(item);
+  }
+
   Future<void> reRegisterAllAlarms() async {
     final pending = await _db.getPendingAlarms();
     for (final itemData in pending) {
+      // Skip completed items — their alarms should not be re-registered.
+      if (itemData.completed == 1) continue;
+
       final item = TodoItem(
         id: itemData.id,
         listId: itemData.listId,

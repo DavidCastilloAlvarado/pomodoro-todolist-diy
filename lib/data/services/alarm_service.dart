@@ -227,6 +227,9 @@ class AlarmService {
         'AlarmService: Re-registering ${pendingItems.length} persisted alarm(s) on startup',
       );
       for (final itemData in pendingItems) {
+        // Skip completed items — their alarms should not be re-registered.
+        if (itemData.completed == 1) continue;
+
         final alarmDay = itemData.alarmDay!;
         final alarmHour = itemData.alarmHour!;
         final alarmMinute = itemData.alarmMinute!;

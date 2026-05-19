@@ -4,10 +4,10 @@ import 'package:birdle/data/models/todo_item.dart';
 import 'package:birdle/data/models/todo_list.dart';
 import 'package:birdle/data/repositories/item_repository.dart';
 import 'package:birdle/data/repositories/list_repository.dart';
+import 'package:birdle/ui/widgets/alarm_picker_dialog.dart';
 
 import 'package:birdle/ui/view_models/item_detail_view_model.dart';
 import 'package:birdle/ui/widgets/color_picker_dialog.dart';
-import 'package:birdle/ui/widgets/alarm_picker_dialog.dart';
 
 class ItemDetailPage extends StatelessWidget {
   const ItemDetailPage({super.key, required this.listId});
@@ -137,16 +137,23 @@ class _ItemDetailBody extends StatelessWidget {
     BuildContext context,
     TodoItem item,
   ) async {
-    final alarm = await showDialog<AlarmInfo?>(
+    final result = await showDialog<AlarmPickerResult>(
       context: context,
       builder: (dialogContext) => AlarmPickerDialog(
         initialAlarm: item.alarm,
       ),
     );
-    if (alarm == null || !context.mounted) return;
+    if (result == null || !context.mounted) return;
 
     final viewModel = context.read<ItemDetailViewModel>();
-    await viewModel.updateItemAlarm(item.id, alarm);
+    switch (result) {
+      case AlarmSet():
+        await viewModel.updateItemAlarm(item.id, result.alarm);
+      case AlarmRemoved():
+        await viewModel.updateItemAlarm(item.id, null);
+      case AlarmDismissed():
+        break;
+    }
   }
 
   @override
@@ -309,23 +316,66 @@ class _ItemRow extends StatelessWidget {
               const SizedBox(width: 8),
 
               // Alarm indicator
-              IconButton(
-                onPressed: onAlarmTap,
-                icon: Icon(
+              GestureDetector(
+                onTap: item.completed
+                    ? () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Alarms are disabled for completed items'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    : onAlarmTap,
+                onLongPress: item.completed || item.alarm == null
+                    ? null
+                    : () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: const Text('Remove alarm'),
+                            content: Text(
+                                'Remove the alarm for "${item.title}"?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(dialogContext).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(dialogContext).pop(true),
+                                child: const Text(
+                                  'Remove',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true && context.mounted) {
+                          final viewModel =
+                              context.read<ItemDetailViewModel>();
+                          await viewModel.updateItemAlarm(item.id, null);
+                        }
+                      },
+                child: Icon(
                   item.alarm != null
                       ? Icons.access_time
                       : Icons.access_time_outlined,
                   size: 20,
-                  color: item.alarm != null
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context)
+                  color: item.completed
+                      ? Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withValues(alpha: 0.35),
+                          .withValues(alpha: 0.2)
+                      : item.alarm != null
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.35),
                 ),
-                tooltip: item.alarm != null ? 'Alarm set' : 'Set alarm',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
               ),
 
               const SizedBox(width: 8),
