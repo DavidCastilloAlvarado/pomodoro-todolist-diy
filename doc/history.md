@@ -90,3 +90,24 @@
 **Color propagation:** `PomodoroDurations.setColors()` → `notifyListeners()` → `PomodoroConfigViewModel` → `PomodoroScreen` via existing `Consumer` pattern.
 
 **Verification:** `dart analyze` — zero errors, zero warnings. Reviewer approved all 13 completion criteria after 1 revision (added `setColors()` to `PomodoroDurations` to properly notify listeners on color change).
+
+## Phase 6 — Pomodoro Reset Bug Fix
+
+### Task: `pomodoro_full_reset`
+
+**Status**: Completed — reviewer approved all 8 criteria
+
+#### Bug: Reset button only reset the current phase, not the entire pomodoro cycle
+
+**Root cause:** `resetTimer()` in `PomodoroViewModel` was designed as a "reset current phase only" button. It never changed `_currentPhase` or `_completedSessions`, leaving the pomodoro stuck on whatever phase it was in (Short Break, Long Break) with the dot counter intact. The Settings → Save workaround worked because `_onConfigChanged()` accidentally triggered a full reset in the idle branch.
+
+**Fix (2 files):**
+
+| File | Change |
+|------|--------|
+| `lib/ui/view_models/pomodoro_view_model.dart` | Rewrote `resetTimer()`: unconditionally sets `_currentPhase = PomodoroPhase.work`, resets all remaining times to full duration, resets `_completedSessions = 0`, deletes active DB session |
+| `lib/data/repositories/pomodoro_repository.dart` | Added `deleteActiveSession()` method: stops foreground task, fetches active session, calls `_db.deletePomodoroSession()` |
+
+**What is NOT reset (intentionally):** Timer color customizations and config durations — these are user preferences, not session state.
+
+**Verification:** `dart analyze` — zero errors, zero warnings. Reviewer approved all 8 completion criteria.

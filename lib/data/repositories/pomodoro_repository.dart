@@ -110,6 +110,14 @@ class PomodoroRepository {
     }
   }
 
+  Future<void> deleteActiveSession() async {
+    await _foregroundTask.stopPomodoroTask();
+    final session = await getActiveSession();
+    if (session != null) {
+      await _db.deletePomodoroSession(session.id);
+    }
+  }
+
   Future<List<PomodoroSession>> getHistory() async {
     final data = await _db.getPomodoroHistory();
     return data.map((d) => PomodoroSession(

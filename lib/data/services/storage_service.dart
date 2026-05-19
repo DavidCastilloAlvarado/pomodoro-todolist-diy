@@ -78,19 +78,19 @@ class StorageService {
 
   Color? getPomodoroWorkColor() {
     final hex = _prefs?.getString(_kPomoWorkColorKey);
-    if (hex == null) return null;
+    if (hex == null || hex.isEmpty) return null;
     return Color(int.parse(hex, radix: 16) | 0xFF000000);
   }
 
   Color? getPomodoroBreakColor() {
     final hex = _prefs?.getString(_kPomoBreakColorKey);
-    if (hex == null) return null;
+    if (hex == null || hex.isEmpty) return null;
     return Color(int.parse(hex, radix: 16) | 0xFF000000);
   }
 
   Color? getPomodoroLongBreakColor() {
     final hex = _prefs?.getString(_kPomoLongBreakColorKey);
-    if (hex == null) return null;
+    if (hex == null || hex.isEmpty) return null;
     return Color(int.parse(hex, radix: 16) | 0xFF000000);
   }
 

@@ -227,19 +227,12 @@ class PomodoroViewModel extends ChangeNotifier {
     _timer?.cancel();
     _timer = null;
     _isTimerRunning = false;
-    await _repository.pauseSession();
-    // Reset the CURRENT phase to its full duration
-    switch (_currentPhase) {
-      case PomodoroPhase.work:
-        _workRemaining = workDuration;
-        break;
-      case PomodoroPhase.shortBreak:
-        _breakRemaining = breakDuration;
-        break;
-      case PomodoroPhase.longBreak:
-        _longBreakRemaining = longBreakDuration;
-        break;
-    }
+    await _repository.deleteActiveSession();
+    _currentPhase = PomodoroPhase.work;
+    _workRemaining = workDuration;
+    _breakRemaining = breakDuration;
+    _longBreakRemaining = longBreakDuration;
+    _completedSessions = 0;
     notifyListeners();
   }
 
