@@ -1,4 +1,5 @@
 import 'package:birdle/ui/view_models/pomodoro_config_view_model.dart';
+import 'package:birdle/ui/widgets/color_picker_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -48,7 +49,7 @@ class _SettingsPageState extends State<SettingsPage> {
         }
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
           children: [
             const Text(
               'Pomodoro Durations (minutes)',
@@ -140,9 +141,127 @@ class _SettingsPageState extends State<SettingsPage> {
               },
               child: const Text('Save'),
             ),
+
+            const SizedBox(height: 32),
+
+            // ── Timer Colors section ─────────────────────────
+            const Text(
+              'Timer Colors',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+
+            // Work color swatch
+            _ColorSwatchTile(
+              label: 'Work',
+              color: config.workColor,
+              onTap: () async {
+                final picked = await showColorPicker(context);
+                if (picked != null && context.mounted) {
+                  config.saveTimerColors(
+                    workColor: picked,
+                    breakColor: config.breakColor,
+                    longBreakColor: config.longBreakColor,
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // Break color swatch
+            _ColorSwatchTile(
+              label: 'Short Break',
+              color: config.breakColor,
+              onTap: () async {
+                final picked = await showColorPicker(context);
+                if (picked != null && context.mounted) {
+                  config.saveTimerColors(
+                    workColor: config.workColor,
+                    breakColor: picked,
+                    longBreakColor: config.longBreakColor,
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // Long break color swatch
+            _ColorSwatchTile(
+              label: 'Long Break',
+              color: config.longBreakColor,
+              onTap: () async {
+                final picked = await showColorPicker(context);
+                if (picked != null && context.mounted) {
+                  config.saveTimerColors(
+                    workColor: config.workColor,
+                    breakColor: config.breakColor,
+                    longBreakColor: picked,
+                  );
+                }
+              },
+            ),
           ],
         );
       },
+      );
+    }
+  }
+
+/// Shows the existing [ColorPickerDialog] and returns the selected color,
+/// or null if cancelled.
+Future<Color?> showColorPicker(BuildContext context) async {
+  return showDialog<Color>(
+    context: context,
+    builder: (ctx) => const ColorPickerDialog(),
+  );
+}
+
+/// A row showing a color swatch and its label.
+class _ColorSwatchTile extends StatelessWidget {
+  final String label;
+  final Color? color;
+  final VoidCallback onTap;
+
+  const _ColorSwatchTile({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color ?? Theme.of(context).colorScheme.primary,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).dividerColor,
+                  width: 1,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const Spacer(),
+            Icon(
+              Icons.color_lens,
+              color: color ?? Theme.of(context).colorScheme.primary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

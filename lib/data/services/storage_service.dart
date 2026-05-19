@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
@@ -67,6 +69,42 @@ class StorageService {
     await _prefs?.setInt(_kPomoBreakKey, breakMinutes);
     await _prefs?.setInt(_kPomoLongBreakKey, longBreakMinutes);
   }
+
+  // ── Pomodoro color config ─────────────────────────────────────────
+
+  static const _kPomoWorkColorKey = 'birdle_pomodoro_work_color';
+  static const _kPomoBreakColorKey = 'birdle_pomodoro_break_color';
+  static const _kPomoLongBreakColorKey = 'birdle_pomodoro_long_break_color';
+
+  Color? getPomodoroWorkColor() {
+    final hex = _prefs?.getString(_kPomoWorkColorKey);
+    if (hex == null) return null;
+    return Color(int.parse(hex, radix: 16) | 0xFF000000);
+  }
+
+  Color? getPomodoroBreakColor() {
+    final hex = _prefs?.getString(_kPomoBreakColorKey);
+    if (hex == null) return null;
+    return Color(int.parse(hex, radix: 16) | 0xFF000000);
+  }
+
+  Color? getPomodoroLongBreakColor() {
+    final hex = _prefs?.getString(_kPomoLongBreakColorKey);
+    if (hex == null) return null;
+    return Color(int.parse(hex, radix: 16) | 0xFF000000);
+  }
+
+  Future<void> savePomodoroColors({
+    required Color? workColor,
+    required Color? breakColor,
+    required Color? longBreakColor,
+  }) async {
+    await _prefs?.setString(_kPomoWorkColorKey, _toHex(workColor));
+    await _prefs?.setString(_kPomoBreakColorKey, _toHex(breakColor));
+    await _prefs?.setString(_kPomoLongBreakColorKey, _toHex(longBreakColor));
+  }
+
+  static String _toHex(Color? c) => c != null ? c.toARGB32().toRadixString(16) : '';
 
   // Legacy key (kept for migration compatibility)
   static const _kPomoDurationsKey = 'birdle_pomodoro_durations';

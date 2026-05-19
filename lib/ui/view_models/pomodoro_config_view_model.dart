@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:ui';
+
 import 'package:birdle/data/services/storage_service.dart';
 import 'package:flutter/foundation.dart';
 
-/// Holds the three configurable Pomodoro durations.
+/// Holds the three configurable Pomodoro durations and colors.
 /// Extends [ChangeNotifier] so the [PomodoroViewModel] can listen for
 /// changes when the user updates durations in Settings.
 class PomodoroDurations extends ChangeNotifier implements ValueListenable<PomodoroDurations> {
@@ -10,11 +12,17 @@ class PomodoroDurations extends ChangeNotifier implements ValueListenable<Pomodo
     this.workMinutes = 25,
     this.breakMinutes = 5,
     this.longBreakMinutes = 15,
+    this.workColor,
+    this.breakColor,
+    this.longBreakColor,
   });
 
   int workMinutes;
   int breakMinutes;
   int longBreakMinutes;
+  Color? workColor;
+  Color? breakColor;
+  Color? longBreakColor;
 
   void update({
     required int workMinutes,
@@ -24,6 +32,14 @@ class PomodoroDurations extends ChangeNotifier implements ValueListenable<Pomodo
     this.workMinutes = workMinutes;
     this.breakMinutes = breakMinutes;
     this.longBreakMinutes = longBreakMinutes;
+    notifyListeners();
+  }
+
+  /// Updates all three timer colors and notifies listeners.
+  void setColors(Color? work, Color? backup, Color? longBreak) {
+    workColor = work;
+    breakColor = backup;
+    longBreakColor = longBreak;
     notifyListeners();
   }
 
@@ -41,6 +57,7 @@ class PomodoroDurations extends ChangeNotifier implements ValueListenable<Pomodo
 class PomodoroConfigViewModel extends ChangeNotifier {
   PomodoroConfigViewModel({required StorageService storage}) : _storage = storage {
     _loadDurations();
+    _loadColors();
   }
 
   final StorageService _storage;
@@ -60,12 +77,23 @@ class PomodoroConfigViewModel extends ChangeNotifier {
   int get breakMinutes => _durations.breakMinutes;
   int get longBreakMinutes => _durations.longBreakMinutes;
 
+  Color? get workColor => _durations.workColor;
+  Color? get breakColor => _durations.breakColor;
+  Color? get longBreakColor => _durations.longBreakColor;
+
   Future<void> _loadDurations() async {
     _durations.update(
       workMinutes: _storage.getPomodoroWorkMinutes(),
       breakMinutes: _storage.getPomodoroBreakMinutes(),
       longBreakMinutes: _storage.getPomodoroLongBreakMinutes(),
     );
+    notifyListeners();
+  }
+
+  void _loadColors() {
+    _durations.workColor = _storage.getPomodoroWorkColor();
+    _durations.breakColor = _storage.getPomodoroBreakColor();
+    _durations.longBreakColor = _storage.getPomodoroLongBreakColor();
     notifyListeners();
   }
 
@@ -92,5 +120,20 @@ class PomodoroConfigViewModel extends ChangeNotifier {
       longBreakMinutes: longBreakMinutes,
     );
     notifyListeners();
+  }
+
+  /// Saves all three timer colors to storage and calls [notifyListeners]
+  /// immediately so the Pomodoro screen refreshes.
+  Future<void> saveTimerColors({
+    required Color? workColor,
+    required Color? breakColor,
+    required Color? longBreakColor,
+  }) async {
+    await _storage.savePomodoroColors(
+      workColor: workColor,
+      breakColor: breakColor,
+      longBreakColor: longBreakColor,
+    );
+    _durations.setColors(workColor, breakColor, longBreakColor);
   }
 }

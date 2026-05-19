@@ -69,3 +69,24 @@
 4. Removed DI dependency — replaced `PomodoroConfigViewModel()` with default values in foreground task (`foreground_task.dart:38`)
 
 **Verification**: `dart analyze` — zero errors, zero warnings. Reviewer approved all 7 completion criteria.
+
+## Phase 5 — Per-Timer Color Customization
+
+### Task: `timer_color_customization`
+
+**Status**: Completed — reviewer approved all 13 criteria
+
+#### Feature: Per-timer color customization for Work, Short Break, Long Break timers
+
+**Changes (4 files, no new files):**
+
+| File | Change |
+|------|--------|
+| `lib/ui/view_models/pomodoro_config_view_model.dart` | Added `workColor`, `breakColor`, `longBreakColor` to `PomodoroDurations` (default `null`); added `setColors()` method that calls `notifyListeners()`; added `saveTimerColors()`, color getters, load in constructor |
+| `lib/data/services/storage_service.dart` | Added 3 color keys (`birdle_pomodoro_work_color`, `birdle_pomodoro_break_color`, `birdle_pomodoro_long_break_color`); added getter/setter methods; colors stored as hex strings |
+| `lib/ui/screens/app_shell/pomodoro_screen.dart` | Added `color` parameter to `_TimerRow`; uses custom color for label text, CircularProgressIndicator, and time text; falls back to theme primary when `null` |
+| `lib/ui/screens/settings/settings_page.dart` | Added "Timer Colors" section with 3 swatches + `ColorPickerDialog`; increased top padding from `EdgeInsets.all(16)` to `EdgeInsets.fromLTRB(16, 24, 16, 16)` |
+
+**Color propagation:** `PomodoroDurations.setColors()` → `notifyListeners()` → `PomodoroConfigViewModel` → `PomodoroScreen` via existing `Consumer` pattern.
+
+**Verification:** `dart analyze` — zero errors, zero warnings. Reviewer approved all 13 completion criteria after 1 revision (added `setColors()` to `PomodoroDurations` to properly notify listeners on color change).

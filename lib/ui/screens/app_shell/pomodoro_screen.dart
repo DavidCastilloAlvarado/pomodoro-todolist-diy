@@ -42,6 +42,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                         remaining: vm.workRemaining,
                         isActive: vm.currentPhase == PomodoroPhase.work,
                         phaseDuration: vm.workDuration,
+                        color: config.workColor ?? Theme.of(context).colorScheme.primary,
                       ),
                       const SizedBox(height: 16),
                       _TimerRow(
@@ -50,6 +51,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                         remaining: vm.breakRemaining,
                         isActive: vm.currentPhase == PomodoroPhase.shortBreak,
                         phaseDuration: vm.breakDuration,
+                        color: config.breakColor ?? Theme.of(context).colorScheme.primary,
                       ),
                       const SizedBox(height: 16),
                       _TimerRow(
@@ -58,6 +60,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                         remaining: vm.longBreakRemaining,
                         isActive: vm.currentPhase == PomodoroPhase.longBreak,
                         phaseDuration: vm.longBreakDuration,
+                        color: config.longBreakColor ?? Theme.of(context).colorScheme.primary,
                       ),
 
                       const SizedBox(height: 24),
@@ -140,6 +143,7 @@ class _TimerRow extends StatelessWidget {
   final int remaining;
   final bool isActive;
   final int phaseDuration;
+  final Color color;
 
   const _TimerRow({
     required this.label,
@@ -147,13 +151,11 @@ class _TimerRow extends StatelessWidget {
     required this.remaining,
     required this.isActive,
     required this.phaseDuration,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3);
     final progress = phaseDuration > 0
         ? (isActive && remaining > 0 ? remaining / phaseDuration : 1.0)
         : 1.0;
