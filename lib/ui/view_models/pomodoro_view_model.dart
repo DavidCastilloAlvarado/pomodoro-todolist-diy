@@ -1,14 +1,23 @@
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:birdle/data/models/pomodoro_session.dart';
 import 'package:birdle/data/repositories/pomodoro_repository.dart';
+import 'package:birdle/data/services/foreground_task.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:uuid/uuid.dart';
 
 class PomodoroViewModel extends ChangeNotifier {
   PomodoroViewModel({required PomodoroRepository repository})
-      : _repository = repository;
+      : _repository = repository {
+    _initForegroundStream();
+    _initForegroundTaskCallback();
+  }
 
   final PomodoroRepository _repository;
+  Timer? _timer;
+  StreamSubscription<int>? _foregroundSubscription;
 
   PomodoroSession? _session;
   PomodoroSession? get session => _session;
@@ -20,7 +29,29 @@ class PomodoroViewModel extends ChangeNotifier {
 
   bool get isRunning => status == PomodoroStatus.running;
 
-  Timer? _timer;
+  void _initForegroundStream() {
+    _foregroundSubscription =
+        ForegroundTaskService().remainingSecondsStream.listen((seconds) {
+      _remainingSeconds = seconds;
+      notifyListeners();
+    });
+  }
+
+  void _initForegroundTaskCallback() {
+    FlutterForegroundTask.addTaskDataCallback(_onForegroundTaskData);
+  }
+
+  void _onForegroundTaskData(Object data) {
+    if (data is Map && data['type'] == 'pomodoro_complete') {
+      // Only play sound + vibrate if the app is in the foreground
+      // and a session is still active.
+      if (status == PomodoroStatus.running ||
+          status == PomodoroStatus.paused) {
+        _playCompletionSound();
+        HapticFeedback.vibrate();
+      }
+    }
+  }
 
   Future<void> loadActiveSession() async {
     _session = await _repository.getActiveSession();
@@ -90,6 +121,11 @@ class PomodoroViewModel extends ChangeNotifier {
       remaining: Duration.zero,
     );
     _remainingSeconds = 0;
+
+    // Sound + vibration on completion (app is in foreground)
+    _playCompletionSound();
+    HapticFeedback.vibrate();
+
     notifyListeners();
   }
 
@@ -105,7 +141,22 @@ class PomodoroViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _foregroundSubscription?.cancel();
+    FlutterForegroundTask.removeTaskDataCallback(_onForegroundTaskData);
+    _audioPlayer.dispose();
     super.dispose();
+  }
+
+  // ── Sound ────────────────────────────────────────────────────────
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  Future<void> _playCompletionSound() async {
+    try {
+      await _audioPlayer.play(AssetSource('sounds/complete.mp3'));
+    } catch (_) {
+      // Sound playback failed silently
+    }
   }
 }
 

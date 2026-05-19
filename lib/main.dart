@@ -5,6 +5,7 @@ import 'package:birdle/data/services/notification_service.dart';
 import 'package:birdle/data/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 typedef StorageInitializer = Future<void> Function();
 typedef PreferredOrientationsSetter =
@@ -77,6 +78,27 @@ Future<Widget> bootstrapBirdleApp({
       stackTrace: stackTrace,
     );
   }
+
+  // Initialize foreground task so startService() works
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: 'birdle_foreground',
+      channelName: 'Birdle Foreground',
+      channelDescription:
+          'Notification shown while a Pomodoro timer is running in the background.',
+      channelImportance: NotificationChannelImportance.HIGH,
+      playSound: true,
+      enableVibration: true,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(
+      showNotification: true,
+      playSound: true,
+    ),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: ForegroundTaskEventAction.nothing(),
+      autoRunOnBoot: true,
+    ),
+  );
 
   BirdleDatabase? database;
   String? dbError;

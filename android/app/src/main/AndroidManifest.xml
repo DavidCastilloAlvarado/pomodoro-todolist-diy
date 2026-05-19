@@ -24,6 +24,23 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+        <receiver
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.RebootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <service
+            android:name="dev.fluttercommunity.plus.flutter_foreground_task.ForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
