@@ -110,6 +110,8 @@ class PomodoroSessionsData {
   final int startedAt;
   final int? endedAt;
   final int remaining;
+  final int currentPhase;
+  final int completedSessions;
   const PomodoroSessionsData({
     required this.id,
     required this.itemTitle,
@@ -119,6 +121,8 @@ class PomodoroSessionsData {
     required this.startedAt,
     this.endedAt,
     required this.remaining,
+    this.currentPhase = 0,
+    this.completedSessions = 0,
   });
 
   Map<String, dynamic> toMap() => {
@@ -130,6 +134,8 @@ class PomodoroSessionsData {
     'started_at': startedAt,
     'ended_at': endedAt,
     'remaining': remaining,
+    'current_phase': currentPhase,
+    'completed_sessions': completedSessions,
   };
 
   factory PomodoroSessionsData.fromMap(Map<String, dynamic> map) => PomodoroSessionsData(
@@ -141,6 +147,8 @@ class PomodoroSessionsData {
     startedAt: map['started_at'] as int,
     endedAt: map['ended_at'] as int?,
     remaining: map['remaining'] as int,
+    currentPhase: map['current_phase'] as int? ?? 0,
+    completedSessions: map['completed_sessions'] as int? ?? 0,
   );
 }
 
@@ -167,7 +175,12 @@ class BirdleDatabase {
   Future<void> open() async {
     final dir = await getApplicationDocumentsDirectory();
     final path = join(dir.path, 'birdle.db');
-    _db = await openDatabase(path, version: 1, onCreate: _createDb);
+    _db = await openDatabase(
+      path,
+      version: 3,
+      onCreate: _createDb,
+      onUpgrade: _upgradeDb,
+    );
   }
 
   Future<void> _createDb(Database db, int version) async {
@@ -209,9 +222,25 @@ class BirdleDatabase {
         status INTEGER NOT NULL,
         started_at INTEGER NOT NULL,
         ended_at INTEGER,
-        remaining INTEGER NOT NULL
+        remaining INTEGER NOT NULL,
+        current_phase INTEGER DEFAULT 0,
+        completed_sessions INTEGER DEFAULT 0
       )
     ''');
+  }
+
+  Future<void> _upgradeDb(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(
+        'ALTER TABLE pomodoro_sessions ADD COLUMN current_phase INTEGER DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE pomodoro_sessions ADD COLUMN completed_sessions INTEGER DEFAULT 0',
+      );
+    }
+    if (oldVersion < 3) {
+      // columns already added in < 2 block, nothing extra needed
+    }
   }
 
   // UserDao

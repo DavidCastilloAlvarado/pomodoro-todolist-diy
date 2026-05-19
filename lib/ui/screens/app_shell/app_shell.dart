@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:birdle/data/models/todo_list.dart';
 import 'package:birdle/ui/screens/app_shell/pomodoro_screen.dart';
-import 'package:birdle/ui/screens/app_shell/settings_view.dart';
+import 'package:birdle/ui/screens/settings/settings_page.dart';
 import 'package:birdle/ui/view_models/list_list_view_model.dart';
-import 'package:birdle/ui/view_models/pomodoro_config_view_model.dart';
 import 'package:birdle/ui/view_models/pomodoro_view_model.dart';
 import 'package:birdle/ui/widgets/color_picker_dialog.dart';
 
@@ -24,7 +23,6 @@ class _AppShellState extends State<AppShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ListListViewModel>().loadLists();
       context.read<PomodoroViewModel>().loadActiveSession();
-      context.read<PomodoroConfigViewModel>().loadDurations();
     });
   }
 
@@ -36,7 +34,7 @@ class _AppShellState extends State<AppShell> {
         children: const [
           _ListsView(),
           PomodoroScreen(),
-          SettingsView(),
+          SettingsPage(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(

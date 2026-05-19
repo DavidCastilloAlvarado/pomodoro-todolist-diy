@@ -70,14 +70,16 @@ List<SingleChildWidget> buildProviders({BirdleDatabase? database}) {
         repository: ctx.read<ListRepository>(),
       ),
     ),
-    ChangeNotifierProvider<PomodoroViewModel>(
-      create: (ctx) => PomodoroViewModel(
-        repository: ctx.read<PomodoroRepository>(),
-      ),
-    ),
+    // PomodoroConfigViewModel must come before PomodoroViewModel
     ChangeNotifierProvider<PomodoroConfigViewModel>(
       create: (ctx) => PomodoroConfigViewModel(
         storage: ctx.read<StorageService>(),
+      ),
+    ),
+    ChangeNotifierProvider<PomodoroViewModel>(
+      create: (ctx) => PomodoroViewModel(
+        repository: ctx.read<PomodoroRepository>(),
+        config: ctx.read<PomodoroConfigViewModel>(),
       ),
     ),
   ];

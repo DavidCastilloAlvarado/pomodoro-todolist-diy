@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:birdle/data/models/pomodoro_session.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
+/// Service that manages the foreground task for the Pomodoro timer.
+/// Tracks the current phase alongside remaining seconds so the
+/// notification title updates correctly on phase transitions.
 class ForegroundTaskService {
   static final ForegroundTaskService _instance = ForegroundTaskService._internal();
   ForegroundTaskService._internal();
@@ -19,6 +22,8 @@ class ForegroundTaskService {
   // that the callback reads directly.
   static int? _callbackRemaining;
   static String? _callbackItemTitle;
+  static int? _callbackCurrentPhase;
+  static int? _callbackCompletedSessions;
 
   Stream<int> get remainingSecondsStream => _remainingStream.stream;
 
@@ -28,9 +33,13 @@ class ForegroundTaskService {
     // Store session data for the foreground callback isolate
     _callbackRemaining = session.remaining.inSeconds;
     _callbackItemTitle = session.itemTitle;
+    _callbackCurrentPhase = session.currentPhase;
+    _callbackCompletedSessions = session.completedSessions;
+
+    final phaseLabel = _phaseLabel(session.currentPhase);
 
     await FlutterForegroundTask.startService(
-      notificationTitle: 'Pomodoro',
+      notificationTitle: phaseLabel,
       notificationText: _formatRemaining(session.remaining),
       callback: pomodoroTaskCallback,
     );
@@ -60,6 +69,17 @@ class ForegroundTaskService {
     final secs = duration.inSeconds.remainder(60);
     return '$mins:${secs.toString().padLeft(2, '0')}';
   }
+
+  String _phaseLabel(int phaseIndex) {
+    switch (PomodoroPhase.values[phaseIndex]) {
+      case PomodoroPhase.work:
+        return 'Work';
+      case PomodoroPhase.shortBreak:
+        return 'Short Break';
+      case PomodoroPhase.longBreak:
+        return 'Long Break';
+    }
+  }
 }
 
 /// Background callback for the foreground task.
@@ -68,41 +88,74 @@ class ForegroundTaskService {
 ///
 /// Implements the countdown timer so the pomodoro survives the app
 /// being killed/swiped away. Each second it updates the notification
-/// via FlutterForegroundTask.updateService(). On completion it stops
-/// the service and shows a completion notification (which uses the
-/// alarm notification channel configured in NotificationService with
-/// playSound:true and enableVibration:true).
+/// via FlutterForegroundTask.updateService(). On completion it handles
+/// phase transitions, updates the notification title, and fires
+/// `sendDataToMain` with `type: 'pomodoro_complete'`.
 @pragma('vm:entry-point')
 void pomodoroTaskCallback(FlutterForegroundTask task) {
   // Read session data from the static fields set by startPomodoroTask()
   final int initialRemaining = ForegroundTaskService._callbackRemaining ?? 0;
   final String itemTitle = ForegroundTaskService._callbackItemTitle ?? 'Unknown';
+  int currentPhase = ForegroundTaskService._callbackCurrentPhase ?? 0;
+  int completedSessions = ForegroundTaskService._callbackCompletedSessions ?? 0;
 
   // Use a mutable counter (not final) so we can decrement it
   int remaining = initialRemaining;
 
   Timer.periodic(const Duration(seconds: 1), (timer) {
     if (remaining <= 0) {
-      timer.cancel();
+      // Phase completed — handle transition
+      switch (PomodoroPhase.values[currentPhase]) {
+        case PomodoroPhase.work:
+          completedSessions++;
+          if (completedSessions < 4) {
+            currentPhase = PomodoroPhase.shortBreak.index;
+          } else {
+            currentPhase = PomodoroPhase.longBreak.index;
+          }
+          break;
+
+        case PomodoroPhase.shortBreak:
+          currentPhase = PomodoroPhase.work.index;
+          break;
+
+        case PomodoroPhase.longBreak:
+          completedSessions = 0;
+          currentPhase = PomodoroPhase.work.index;
+          break;
+      }
+
+      // Update notification with new phase title
       FlutterForegroundTask.updateService(
-        notificationTitle: 'Pomodoro Complete!',
-        notificationText: 'Session for $itemTitle is done.',
+        notificationTitle: _phaseLabel(currentPhase),
+        notificationText: 'Get ready for $itemTitle',
       );
+
       // Notify the main isolate so it can play sound + vibrate
       // if the app is still running.
       FlutterForegroundTask.sendDataToMain({
         'type': 'pomodoro_complete',
         'itemTitle': itemTitle,
       });
-      FlutterForegroundTask.stopService();
     } else {
       remaining--;
       FlutterForegroundTask.updateService(
-        notificationTitle: 'Pomodoro',
+        notificationTitle: _phaseLabel(currentPhase),
         notificationText: _formatRemaining(Duration(seconds: remaining)),
       );
     }
   });
+}
+
+String _phaseLabel(int phaseIndex) {
+  switch (PomodoroPhase.values[phaseIndex]) {
+    case PomodoroPhase.work:
+      return 'Work';
+    case PomodoroPhase.shortBreak:
+      return 'Short Break';
+    case PomodoroPhase.longBreak:
+      return 'Long Break';
+  }
 }
 
 String _formatRemaining(Duration duration) {

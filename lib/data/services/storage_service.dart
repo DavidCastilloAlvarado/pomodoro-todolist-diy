@@ -42,6 +42,33 @@ class StorageService {
 
   // ── Pomodoro duration config ──────────────────────────────────────
 
+  static const _kPomoWorkKey = 'birdle_pomodoro_work_minutes';
+  static const _kPomoBreakKey = 'birdle_pomodoro_break_minutes';
+  static const _kPomoLongBreakKey = 'birdle_pomodoro_long_break_minutes';
+
+  int getPomodoroWorkMinutes() {
+    return _prefs?.getInt(_kPomoWorkKey) ?? 25;
+  }
+
+  int getPomodoroBreakMinutes() {
+    return _prefs?.getInt(_kPomoBreakKey) ?? 5;
+  }
+
+  int getPomodoroLongBreakMinutes() {
+    return _prefs?.getInt(_kPomoLongBreakKey) ?? 15;
+  }
+
+  Future<void> savePomodoroDurations({
+    required int workMinutes,
+    required int breakMinutes,
+    required int longBreakMinutes,
+  }) async {
+    await _prefs?.setInt(_kPomoWorkKey, workMinutes);
+    await _prefs?.setInt(_kPomoBreakKey, breakMinutes);
+    await _prefs?.setInt(_kPomoLongBreakKey, longBreakMinutes);
+  }
+
+  // Legacy key (kept for migration compatibility)
   static const _kPomoDurationsKey = 'birdle_pomodoro_durations';
 
   List<int> getPomodoroDurations() {
@@ -50,7 +77,7 @@ class StorageService {
     return raw.split(',').map(int.parse).toList();
   }
 
-  Future<void> savePomodoroDurations(List<int> durations) async {
+  Future<void> savePomodoroDurationsLegacy(List<int> durations) async {
     await _prefs?.setString(_kPomoDurationsKey, durations.join(','));
   }
 
