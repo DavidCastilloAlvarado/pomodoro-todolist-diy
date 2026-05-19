@@ -48,3 +48,24 @@
 - **Fix**: Made fields mutable, added `update()` method, `saveDurations()` now calls `_durations.update()` in place — listener stays attached.
 
 - `dart analyze`: zero errors, zero warnings
+
+## Phase 4 — Pomodoro Break Timer Fix
+
+### Task: `pomodoro_break_timer_fix`
+
+**Status**: Completed — reviewer approved all 7 criteria
+
+#### Bug: Short Break timer showed 00:00 and stopped after Work phase completed
+
+**Root cause**: Three issues in the phase transition flow:
+1. `_onPhaseComplete()` canceled `_timer` but never called `_startTimer()` to restart countdown for the new phase
+2. Foreground stream listener overwrote `_breakRemaining` with stale `0` after Work phase finished
+3. Foreground callback's `remaining` stayed `<= 0`, causing repeated `pomodoro_complete` events
+
+**Fixes applied**:
+1. Added `_startTimer()` call in `_onPhaseComplete()` after phase transition (`pomodoro_view_model.dart:283`)
+2. Added `if (seconds <= 0) return;` guard in foreground stream listener (`pomodoro_view_model.dart:94`)
+3. Reset `remaining = newPhaseDuration` in foreground callback after phase transition (`foreground_task.dart:138-152`)
+4. Removed DI dependency — replaced `PomodoroConfigViewModel()` with default values in foreground task (`foreground_task.dart:38`)
+
+**Verification**: `dart analyze` — zero errors, zero warnings. Reviewer approved all 7 completion criteria.

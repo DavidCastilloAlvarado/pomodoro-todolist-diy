@@ -24,6 +24,9 @@ class ForegroundTaskService {
   static String? _callbackItemTitle;
   static int? _callbackCurrentPhase;
   static int? _callbackCompletedSessions;
+  static int? _callbackWorkDuration;
+  static int? _callbackBreakDuration;
+  static int? _callbackLongBreakDuration;
 
   Stream<int> get remainingSecondsStream => _remainingStream.stream;
 
@@ -35,6 +38,10 @@ class ForegroundTaskService {
     _callbackItemTitle = session.itemTitle;
     _callbackCurrentPhase = session.currentPhase;
     _callbackCompletedSessions = session.completedSessions;
+    // Defaults in case config is not yet loaded
+    _callbackWorkDuration = session.durationMinutes * 60;
+    _callbackBreakDuration = 5 * 60;
+    _callbackLongBreakDuration = 15 * 60;
 
     final phaseLabel = _phaseLabel(session.currentPhase);
 
@@ -125,10 +132,26 @@ void pomodoroTaskCallback(FlutterForegroundTask task) {
           break;
       }
 
-      // Update notification with new phase title
+      // Reset remaining to the new phase's duration so the countdown
+      // continues and pomodoro_complete fires only once.
+      int newPhaseDuration;
+      switch (PomodoroPhase.values[currentPhase]) {
+        case PomodoroPhase.work:
+          newPhaseDuration = ForegroundTaskService._callbackWorkDuration ?? 25 * 60;
+          break;
+        case PomodoroPhase.shortBreak:
+          newPhaseDuration = ForegroundTaskService._callbackBreakDuration ?? 5 * 60;
+          break;
+        case PomodoroPhase.longBreak:
+          newPhaseDuration = ForegroundTaskService._callbackLongBreakDuration ?? 15 * 60;
+          break;
+      }
+      remaining = newPhaseDuration;
+
+      // Update notification with new phase title and countdown
       FlutterForegroundTask.updateService(
         notificationTitle: _phaseLabel(currentPhase),
-        notificationText: 'Get ready for $itemTitle',
+        notificationText: _formatRemaining(Duration(seconds: remaining)),
       );
 
       // Notify the main isolate so it can play sound + vibrate

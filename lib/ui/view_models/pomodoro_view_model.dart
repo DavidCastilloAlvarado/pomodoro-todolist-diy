@@ -91,6 +91,7 @@ class PomodoroViewModel extends ChangeNotifier {
   void _initForegroundStream() {
     _foregroundSubscription =
         ForegroundTaskService().remainingSecondsStream.listen((seconds) {
+      if (seconds <= 0) return; // Guard: ignore stale zero values
       switch (_currentPhase) {
         case PomodoroPhase.work:
           _workRemaining = seconds;
@@ -279,6 +280,7 @@ class PomodoroViewModel extends ChangeNotifier {
     _playCompletionSound();
     HapticFeedback.vibrate();
 
+    _startTimer();
     notifyListeners();
   }
 
