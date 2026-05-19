@@ -79,8 +79,20 @@ class ItemDetailViewModel extends ChangeNotifier {
 
   Future<void> updateItemAlarm(String itemId, AlarmInfo? alarm) async {
     final item = _items.firstWhere((i) => i.id == itemId);
+
+    // Cancel any existing alarm before setting a new one.
+    if (item.alarm != null) {
+      await _repository.cancelAlarm(itemId);
+    }
+
     final updated = item.copyWith(alarm: alarm);
     await _repository.updateItem(updated);
+
+    // Schedule the new alarm if one was set.
+    if (alarm != null) {
+      await _repository.scheduleAlarm(updated);
+    }
+
     _items = _items.map((i) => i.id == itemId ? updated : i).toList();
     notifyListeners();
   }

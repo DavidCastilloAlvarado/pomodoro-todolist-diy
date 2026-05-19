@@ -312,7 +312,10 @@ class BirdleDatabase {
   }
 
   Future<List<TodoItemsData>> getPendingAlarms() async {
-    final result = await _dbOrThrow.query('todo_items', where: 'alarm_day IS NOT NULL');
+    final result = await _dbOrThrow.query(
+      'todo_items',
+      where: 'alarm_day IS NOT NULL AND completed = 0',
+    );
     return result.map(TodoItemsData.fromMap).toList();
   }
 

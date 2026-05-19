@@ -111,3 +111,24 @@
 **What is NOT reset (intentionally):** Timer color customizations and config durations — these are user preferences, not session state.
 
 **Verification:** `dart analyze` — zero errors, zero warnings. Reviewer approved all 8 completion criteria.
+
+## Phase 4 — Item Alarm Cancellation
+
+### Task: `fix_item_alarm_cancellation`
+
+**Status**: Completed — reviewer approved all 6 criteria
+
+#### Feature: Remove item alarms + cancel on completion
+
+**Changes (6 files):**
+
+| File | Change |
+|------|--------|
+| `lib/ui/widgets/alarm_picker_dialog.dart` | Added sealed `AlarmPickerResult` type (`AlarmSet`/`AlarmRemoved`/`AlarmDismissed`); added "Clear" button visible only when `initialAlarm != null` |
+| `lib/ui/screens/item_detail_page.dart` | Updated alarm picker handler for all 3 result variants; added long-press gesture on alarm icon with confirmation dialog to quickly remove an alarm |
+| `lib/ui/view_models/item_detail_view_model.dart` | `updateItemAlarm()` now cancels the old alarm before setting a new one, and schedules the new alarm after DB update |
+| `lib/data/repositories/item_repository.dart` | `updateItem()` detects alarm removal (`wasAlarmSet`) and cancels scheduled notification; added public `cancelAlarm`/`scheduleAlarm` wrappers; `reRegisterAllAlarms` skips completed items |
+| `lib/data/services/database.dart` | `getPendingAlarms` query now filters `completed = 0` |
+| `lib/data/services/alarm_service.dart` | Added defense-in-depth `completed == 1` guard in `reRegisterAllAlarms` |
+
+**Completion criteria:** All 6 met — clear/remove action, null alarm persistence, cancel-before-sync, cancel on completion, no re-registration, `dart analyze` passes.
