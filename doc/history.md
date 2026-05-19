@@ -132,3 +132,26 @@
 | `lib/data/services/alarm_service.dart` | Added defense-in-depth `completed == 1` guard in `reRegisterAllAlarms` |
 
 **Completion criteria:** All 6 met — clear/remove action, null alarm persistence, cancel-before-sync, cancel on completion, no re-registration, `dart analyze` passes.
+
+## Phase 4 — Completed Item Alarm Scheduling Fix
+
+### Task: `fix_completed_item_alarm_scheduling`
+
+**Status**: Completed — reviewer approved all 6 criteria
+
+#### Bug: Modifying alarm on a completed item schedules a new alarm that fires
+
+**Root cause:** Two layers allowed alarms to be scheduled on completed items:
+1. **UI** — `_ItemRow` alarm icon was tappable for all items regardless of `completed` state
+2. **Repository** — `updateItem()` unconditionally called `scheduleAlarm()` when `item.alarm != null`, without checking `item.completed`
+
+**Fix (2 files):**
+
+| File | Change |
+|------|--------|
+| `lib/ui/screens/item_detail_page.dart` | Alarm icon dimmed (`alpha: 0.2`) for completed items; tap shows SnackBar "Alarms are disabled for completed items"; long-press disabled (`null`) |
+| `lib/data/repositories/item_repository.dart` | Added `!item.completed` guard to `updateItem()`: `if (item.alarm != null && !item.completed)` — defense-in-depth |
+
+**Defense-in-depth:** Three layers — UI guard, repository guard, and both `reRegisterAllAlarms()` implementations skip completed items.
+
+**Completion criteria:** All 6 met — dimmed icon, SnackBar on tap, long-press disabled, repository guard, no notification via any code path, `dart analyze` passes.
