@@ -135,5 +135,6 @@ class PomodoroConfigViewModel extends ChangeNotifier {
       longBreakColor: longBreakColor,
     );
     _durations.setColors(workColor, breakColor, longBreakColor);
+    notifyListeners();
   }
 }
